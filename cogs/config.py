@@ -146,7 +146,7 @@ class InteractiveSetupView(discord.ui.View):
         await self.update_embed(interaction)
 
     # 7. Whitelist Owner & Invoker Button
-    @discord.ui.button(label="Auto-Whitelist Owner & Invoker", style=discord.ButtonStyle.primary, row=4)
+    @discord.ui.button(label="Whitelist Owner", style=discord.ButtonStyle.primary, row=4)
     async def whitelist_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         await add_whitelist(guild.id, guild.owner_id, 2, interaction.user.id)
@@ -158,7 +158,7 @@ class InteractiveSetupView(discord.ui.View):
         await self.update_embed(interaction)
 
     # 8. Auto-Whitelist Bots Button
-    @discord.ui.button(label="Auto-Whitelist Common Bots", style=discord.ButtonStyle.secondary, row=4)
+    @discord.ui.button(label="Whitelist Bots", style=discord.ButtonStyle.secondary, row=4)
     async def bot_whitelist_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         whitelisted_count = 0
@@ -175,25 +175,8 @@ class InteractiveSetupView(discord.ui.View):
         await interaction.response.send_message(f"Whitelisted {whitelisted_count} bots in the server.", ephemeral=True)
         await self.update_embed(interaction)
 
-    # 8.5. Auto-Whitelist Staff Roles Button
-    @discord.ui.button(label="Auto-Whitelist Staff Roles", style=discord.ButtonStyle.secondary, row=4)
-    async def role_whitelist_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        guild = interaction.guild
-        whitelisted_count = 0
-        # Whitelist roles that look like staff roles (admin, mod, staff, etc.)
-        for role in guild.roles:
-            role_name_lower = role.name.lower()
-            if any(keyword in role_name_lower for keyword in ['admin', 'mod', 'moderator', 'staff', 'helper', 'support']):
-                await add_role_whitelist(guild.id, role.id, interaction.user.id, "Auto-whitelisted during setup")
-                whitelisted_count += 1
-        
-        self.role_whitelist_done = True
-        button.disabled = True
-        await interaction.response.send_message(f"Whitelisted {whitelisted_count} staff roles in the server.", ephemeral=True)
-        await self.update_embed(interaction)
-
     # 9. Enable All Protections Button
-    @discord.ui.button(label="Enable All Protections", style=discord.ButtonStyle.success, row=5)
+    @discord.ui.button(label="Enable Protections", style=discord.ButtonStyle.success, row=4)
     async def protections_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         await update_guild(guild.id, antinuke_enabled=1, automod_enabled=1, raid_mode=0)
@@ -203,7 +186,7 @@ class InteractiveSetupView(discord.ui.View):
         await self.update_embed(interaction)
 
     # 10. Auto-Create Channel Button
-    @discord.ui.button(label="Create Logs Channel", style=discord.ButtonStyle.secondary, row=5)
+    @discord.ui.button(label="Create Logs", style=discord.ButtonStyle.secondary, row=4)
     async def create_channel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         ch = discord.utils.get(guild.text_channels, name="repent-logs")
@@ -226,39 +209,8 @@ class InteractiveSetupView(discord.ui.View):
         await interaction.response.send_message(f"Created and set log channel to {ch.mention}", ephemeral=True)
         await self.update_embed(interaction)
 
-    # 11. Send Verification Button
-    @discord.ui.button(label="Send Verification Message", style=discord.ButtonStyle.success, row=6)
-    async def send_verification_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not self.verification_channel or not self.verification_role:
-            return await interaction.response.send_message("Please set verification channel and role first.", ephemeral=True)
-        
-        guild = interaction.guild
-        await update_guild(guild.id, verification_enabled=1)
-        self.verification_enabled = True
-        button.disabled = True
-        
-        # Send verification message
-        from cogs.verification import VerificationButton
-        embed = discord.Embed(
-            title="Verification Required",
-            description="Click the button below to verify yourself and gain access to the server.",
-            color=0x4488FF
-        )
-        embed.set_footer(text=f"Powered by {self.bot.user.name}")
-        
-        view = discord.ui.View()
-        view.add_item(VerificationButton(self.bot, self.verification_role.id))
-        
-        try:
-            await self.verification_channel.send(embed=embed, view=view)
-            await interaction.response.send_message(f"Verification message sent to {self.verification_channel.mention}", ephemeral=True)
-        except Exception as e:
-            await interaction.response.send_message(f"Failed to send verification message: {e}", ephemeral=True)
-        
-        await self.update_embed(interaction)
-
-    # 12. Done Button
-    @discord.ui.button(label="Done / Finish", style=discord.ButtonStyle.danger, row=6)
+    # 11. Done Button
+    @discord.ui.button(label="Finish", style=discord.ButtonStyle.danger, row=4)
     async def done_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         bot_member = interaction.guild.me
         warnings = []

@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balance — Security Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/balance-theme.css">
+<link rel="stylesheet" href="/dashboard.css">
+<style>
+/* Override dashboard styles with Balance theme */
+.dashboard-container {
+  background: var(--bg-primary);
+  min-height: 100vh;
+}
+
+.dashboard-header {
+  background: rgba(10, 10, 10, 0.95);
+  border-bottom: 2px solid var(--border-color);
+  backdrop-filter: blur(10px);
+}
+
+.sidebar {
+  background: var(--bg-secondary);
+  border-right: 2px solid var(--border-color);
+}
+
+.sidebar-link {
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.sidebar-link:hover, .sidebar-link.active {
+  color: var(--balance-green);
+  background: rgba(61, 220, 132, 0.1);
+}
+
+.sidebar-link.active::before {
+  background: var(--balance-green);
+  box-shadow: 0 0 10px var(--balance-green);
+}
+
+.dashboard-content {
+  background: var(--bg-primary);
+}
+
+.section-header h2 {
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.section-line {
+  background: linear-gradient(90deg, var(--balance-green), transparent);
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.stat-card:hover {
+  border-color: var(--balance-green);
+  box-shadow: 0 0 20px rgba(61, 220, 132, 0.3);
+}
+
+.stat-number {
+  color: var(--balance-green);
+}
+
+.server-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  transition: all var(--transition-normal);
+}
+
+.server-card:hover {
+  border-color: var(--balance-green);
+  box-shadow: 0 0 20px rgba(61, 220, 132, 0.3);
+  transform: translateY(-4px);
+}
+
+.server-icon img, .server-icon-placeholder {
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+}
+
+.server-card:hover .server-icon img,
+.server-card:hover .server-icon-placeholder {
+  border-color: var(--balance-green);
+  box-shadow: 0 0 15px rgba(61, 220, 132, 0.4);
+}
+
+.server-name {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.server-owner {
+  color: var(--text-secondary);
+}
+
+.server-btn {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: 'Space Mono', monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 9px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all var(--transition-normal);
+}
+
+.server-btn:hover {
+  border-color: var(--balance-green);
+  color: var(--balance-green);
+  box-shadow: 0 0 15px rgba(61, 220, 132, 0.3);
+}
+
+.moderation-container {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.tool-section h3 {
+  color: var(--text-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.action-btn {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 8px;
+  transition: all var(--transition-normal);
+}
+
+.action-btn:hover {
+  border-color: var(--balance-green);
+  color: var(--balance-green);
+  box-shadow: 0 0 20px rgba(61, 220, 132, 0.3);
+  transform: translateY(-2px);
+}
+
+.action-btn.danger:hover {
+  border-color: var(--balance-red);
+  color: var(--balance-red);
+  box-shadow: 0 0 20px rgba(231, 76, 60, 0.3);
+}
+
+.action-btn.warning:hover {
+  border-color: var(--balance-orange);
+  color: var(--balance-orange);
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+}
+
+.action-btn.info:hover {
+  border-color: var(--balance-blue);
+  color: var(--balance-blue);
+  box-shadow: 0 0 20px rgba(52, 152, 219, 0.3);
+}
+
+.user-info-result, .logs-container, .settings-container {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.text-input, .select-input {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: 'Space Mono', monospace;
+  border-radius: 8px;
+}
+
+.text-input:focus, .select-input:focus {
+  border-color: var(--balance-green);
+  box-shadow: 0 0 0 3px rgba(61, 220, 132, 0.2);
+}
+
+.action-modal {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.modal-btn {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 6px;
+}
+
+.modal-btn.confirm {
+  background: var(--balance-green);
+  border-color: var(--balance-green);
+  color: var(--bg-primary);
+}
+
+.activity-item {
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.user-avatar img {
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+}
+
+.user-name {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.user-discriminator {
+  color: var(--text-secondary);
+}
+
+.logout-btn {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: 'Space Mono', monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 6px;
+}
+
+.logout-btn:hover {
+  border-color: var(--balance-red);
+  color: var(--balance-red);
+}
+
+/* Balance-specific additions */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 8px;
+  background: rgba(61, 220, 132, 0.15);
+  color: var(--balance-green);
+  border: 1px solid rgba(61, 220, 132, 0.3);
+  border-radius: 12px;
+}
+
+.server-count-info {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.server-count-info span {
+  color: var(--balance-green);
+}
+</style>
+</head>
+<body>
+
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <div class="logo-wrap">
+      <a href="/" class="logo">Balance</a>
+      <div class="balance-badge admin">
+        <span class="balance-status-dot"></span>
+        Security Dashboard
+      </div>
+    </div>
+    <div class="user-info">
+      {% if user %}
+      <div class="user-avatar">
+        <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="{{ user.username }}">
+      </div>
+      <div class="user-details">
+        <div class="user-name">{{ user.username }}</div>
+        <div class="user-discriminator">#{{ user.discriminator }}</div>
+      </div>
+      <a href="/logout" class="logout-btn">Logout</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <a href="#" class="sidebar-link active" data-section="overview">Overview</a>
+        <a href="#" class="sidebar-link" data-section="servers">Servers</a>
+        <a href="#" class="sidebar-link" data-section="moderation">Moderation</a>
+        <a href="#" class="sidebar-link" data-section="logs">Logs</a>
+        <a href="#" class="sidebar-link" data-section="settings">Settings</a>
+      </nav>
+    </aside>
+
+    <section class="dashboard-content">
+      <!-- Overview Section -->
+      <div id="overview-section" class="content-section active">
+        <div class="section-header">
+          <h2>Dashboard Overview</h2>
+          <div class="section-line"></div>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number">{{ guilds|length }}/{{ total_guilds }}</div>
+            <div class="stat-label">Protected Servers</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Actions Today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Active Threats</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">99%</div>
+            <div class="stat-label">Protection Rate</div>
+          </div>
+        </div>
+
+        <div class="recent-activity">
+          <h3>Recent Activity</h3>
+          <div class="activity-list" id="activity-list">
+            <div class="activity-item">
+              <div class="activity-icon">🛡️</div>
+              <div class="activity-details">
+                <div class="activity-title">Balance bot initialized</div>
+                <div class="activity-time">Just now</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Servers Section -->
+      <div id="servers-section" class="content-section">
+        <div class="section-header">
+          <h2>Your Protected Servers</h2>
+          <div class="section-line"></div>
+        </div>
+        
+        <div class="server-count-info">
+          Showing <span>{{ guilds|length }}</span> servers with administrator permissions (out of {{ total_guilds }} total)
+        </div>
+        
+        <div class="servers-grid" id="servers-grid">
+          {% for guild in guilds %}
+          <div class="server-card" data-guild-id="{{ guild.id }}">
+            <div class="server-icon">
+              {% if guild.icon %}
+              <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" alt="{{ guild.name }}">
+              {% else %}
+              <div class="server-icon-placeholder">{{ guild.name[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="server-info">
+              <div class="server-name">{{ guild.name }}</div>
+              <div class="server-owner">
+                {% if guild.owner %}
+                <span class="admin-badge">👑 Owner</span>
+                {% else %}
+                <span class="admin-badge">🛡️ Administrator</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="server-actions">
+              <button class="server-btn manage-btn" data-guild-id="{{ guild.id }}">Manage</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        
+        {% if guilds|length == 0 %}
+        <div style="text-align: center; padding: 60px; color: var(--text-secondary);">
+          <div style="font-size: 48px; margin-bottom: 16px;">🛡️</div>
+          <div style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">No Admin Servers</div>
+          <div style="font-size: 12px;">You don't have administrator permissions in any servers. Add Balance to servers where you have admin rights to see them here.</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Moderation Section -->
+      <div id="moderation-section" class="content-section">
+        <div class="section-header">
+          <h2>Moderation Panel</h2>
+          <div class="section-line"></div>
+        </div>
+
+        <div class="moderation-container">
+          <div class="server-selector">
+            <label>Select Server:</label>
+            <select id="guild-select" class="select-input">
+              <option value="">Choose a server...</option>
+              {% for guild in guilds %}
+              <option value="{{ guild.id }}">{{ guild.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="moderation-tools">
+            <div class="tool-section">
+              <h3>Quick Actions</h3>
+              <div class="quick-actions-grid">
+                <button class="action-btn danger" data-action="ban">
+                  <span class="action-icon">🔨</span>
+                  <span>ban User</span>
+                </button>
+                <button class="action-btn warning" data-action="kick">
+                  <span class="action-icon">👢</span>
+                  <span>Kick User</span>
+                </button>
+                <button class="action-btn warning" data-action="timeout">
+                  <span class="action-icon">⏰</span>
+                  <span>Timeout</span>
+                </button>
+                <button class="action-btn info" data-action="purge">
+                  <span class="action-icon">🧹</span>
+                  <span>Purge Messages</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="tool-section">
+              <h3>User Lookup</h3>
+              <div class="lookup-form">
+                <input type="text" id="user-lookup-input" class="text-input" placeholder="Enter user ID or @mention">
+                <button id="lookup-btn" class="lookup-btn">Lookup</button>
+              </div>
+              <div id="user-info-result" class="user-info-result"></div>
+            </div>
+
+            <div class="tool-section">
+              <h3>Mass Actions</h3>
+              <div class="mass-actions">
+                <button class="mass-btn danger" data-action="massban">
+                  <span class="action-icon">🔨</span>
+                  <span>Mass Ban</span>
+                </button>
+                <button class="mass-btn info" data-action="masskick">
+                  <span class="action-icon">👢</span>
+                  <span>Mass Kick</span>
+                </button>
+                <button class="mass-btn warning" data-action="lockdown">
+                  <span class="action-icon">🔒</span>
+                  <span>Server Lockdown</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Section -->
+      <div id="logs-section" class="content-section">
+        <div class="section-header">
+          <h2>Audit Logs</h2>
+          <div class="section-line"></div>
+        </div>
+
+        <div class="logs-container">
+          <div class="logs-filter">
+            <select id="log-type-filter" class="select-input">
+              <option value="all">All Events</option>
+              <option value="ban">Bans</option>
+              <option value="kick">Kicks</option>
+              <option value="delete">Deletions</option>
+              <option value="role">Role Changes</option>
+            </select>
+          </div>
+          <div class="logs-list" id="logs-list">
+            <div class="log-entry">
+              <div class="log-time">Just now</div>
+              <div class="log-event">System initialized</div>
+              <div class="log-details">Dashboard loaded successfully</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Section -->
+      <div id="settings-section" class="content-section">
+        <div class="section-header">
+          <h2>Settings</h2>
+          <div class="section-line"></div>
+        </div>
+
+        <div class="settings-container">
+          <div class="setting-group">
+            <h3>Protection Settings</h3>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked>
+                <span>Enable Antinuke</span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked>
+                <span>Enable Anti-Raid</span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked>
+                <span>Enable AutoMod</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <h3>Notification Settings</h3>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked>
+                <span>Email Notifications</span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox">
+                <span>DM Notifications</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <h3>API Settings</h3>
+            <div class="setting-item">
+              <label>Bot Token:</label>
+              <input type="password" class="text-input" placeholder="Enter your bot token">
+            </div>
+            <button class="save-btn">Save Settings</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="modal-overlay" class="modal-overlay">
+  <div id="action-modal" class="action-modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Confirm Action</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="modal-description">Are you sure you want to perform this action?</p>
+      <div class="modal-form">
+        <input type="text" id="modal-input-user" class="text-input" placeholder="User ID or @mention">
+        <textarea id="modal-input-reason" class="text-input" placeholder="Reason (optional)"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel">Cancel</button>
+      <button class="modal-btn confirm" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Include Balance Icons -->
+<div style="display:none">
+  <!-- Shield Icon - Protection -->
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <symbol id="icon-shield">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </symbol>
+  </svg>
+  
+  <!-- Server Icon -->
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <symbol id="icon-server">
+      <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+      <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+    </symbol>
+  </svg>
+  
+  <!-- Ban Icon -->
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <symbol id="icon-ban">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M4.93 4.93l14.14 14.14"/>
+    </symbol>
+  </svg>
+  
+  <!-- Activity Icon -->
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <symbol id="icon-activity">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </symbol>
+  </svg>
+  
+  <!-- Settings Icon -->
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <symbol id="icon-settings">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+    </symbol>
+  </svg>
+</div>
+
+<script src="/dashboard.js"></script>
+<script>
+// Add animated statistics counter
+function animateCounter(element, target, suffix = '') {
+  let current = 0;
+  const increment = target / 50;
+  const timer = setInterval(() => {
+    current += increment;
+    if (current >= target) {
+      current = target;
+      clearInterval(timer);
+    }
+    element.textContent = Math.floor(current) + suffix;
+  }, 30);
+}
+
+// Animate statistics on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const statNumbers = document.querySelectorAll('.stat-number');
+  statNumbers.forEach(stat => {
+    const text = stat.textContent;
+    const number = parseInt(text) || 0;
+    const suffix = text.replace(/[0-9]/g, '');
+    if (number > 0) {
+      animateCounter(stat, number, suffix);
+    }
+  });
+  
+  // Add pulsing effect to protection status
+  const statusDots = document.querySelectorAll('.balance-status-dot');
+  statusDots.forEach(dot => {
+    dot.style.animation = 'pulse 2s infinite';
+  });
+});
+</script>
+</body>
+</html>

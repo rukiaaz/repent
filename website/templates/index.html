@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balance — Discord Antinuke Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="splash">
+  <div style="text-align:center">
+    <div class="sp-name"><span>Balance</span></div>
+    <div class="sp-bar"></div>
+    <div class="sp-sub">DISCORD ANTINUKE BOT</div>
+  </div>
+</div>
+
+<div id="wipe"></div>
+<div id="prog"></div>
+<canvas id="fog"></canvas>
+
+<div id="prev-card" class="proj-preview">
+  <img id="prev-img" src="" alt="">
+  <div id="prev-label" class="prev-label"></div>
+</div>
+
+<button id="btt">↑</button>
+
+<div class="cur" id="cur"></div>
+<div class="cur-ring" id="cur-ring"></div>
+
+<div class="wrap" id="wrap" style="display:none">
+  <header>
+    <div class="logo-wrap">
+      <a href="#home" class="logo" data-nav="home">Balance</a>
+      <div class="badge"><span class="badge-dot"></span><span>Active Protection</span></div>
+    </div>
+      <div style="display:flex;align-items:center;gap:20px">
+      {% if session.get('user') %}
+      <a href="/dashboard" class="dashboard-btn">Dashboard</a>
+      {% else %}
+      <a href="/login" class="dashboard-btn" target="_blank" rel="noopener">Login</a>
+      {% endif %}
+      <button class="hbg" id="hbg" aria-label="Menu"><span></span><span></span><span></span></button>
+    </div>
+  </header>
+
+  <div class="mobmenu" id="mobmenu">
+    <a href="#home" data-nav="home">Home</a>
+    <a href="#protection" data-nav="protection">Protection</a>
+    <a href="#features" data-nav="features">Features</a>
+    <a href="#commands" data-nav="commands">Commands</a>
+    <a href="#why" data-nav="why">Why</a>
+    <a href="#bot" data-nav="bot">Bot</a>
+    <a href="#invite" data-nav="invite">Invite</a>
+    <a href="#faq" data-nav="faq">FAQ</a>
+  </div>
+
+  <nav class="side" id="sidenav">
+    <a href="#home" data-nav="home"><span class="dot"></span>Home</a>
+    <a href="#protection" data-nav="protection"><span class="dot"></span>Protection</a>
+    <a href="#features" data-nav="features"><span class="dot"></span>Features</a>
+    <a href="#commands" data-nav="commands"><span class="dot"></span>Commands</a>
+    <a href="#why" data-nav="why"><span class="dot"></span>Why</a>
+    <a href="#bot" data-nav="bot"><span class="dot"></span>Bot</a>
+    <a href="#invite" data-nav="invite"><span class="dot"></span>Invite</a>
+    <a href="#faq" data-nav="faq"><span class="dot"></span>FAQ</a>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section id="home">
+      <div id="hero-content">
+        <p class="h-sub">Discord Security · Antinuke · Moderation</p>
+        <h1 class="h-title">
+          <span class="ln"><span>Protect</span></span>
+          <span class="ln"><span>Your</span></span>
+          <span class="ln"><span>Server.</span></span>
+        </h1>
+        <p class="h-desc">
+          Built for Discord servers that <em>refuse to get nuked.</em><br>
+          Audit-log based detection. <em>Zero bypass paths.</em><br>
+          Instant response. <em>Always watching.</em>
+        </p>
+        <div class="stats">
+          <div><div class="stat-num" data-target="0.2" data-suffix="s">0.2s</div><div class="stat-label">Response Time</div></div>
+          <div><div class="stat-num" data-target="99" data-suffix="%">99%</div><div class="stat-label">Detection Rate</div></div>
+          <div><div class="stat-num">0</div><div class="stat-label">Known Bypasses</div></div>
+          <div><div class="stat-num">24/7</div><div class="stat-label">Live Protection</div></div>
+        </div>
+      </div>
+      <div class="scroll-hint">Scroll</div>
+    </section>
+
+    <!-- PROTECTION -->
+    <section id="protection" class="sep">
+      <div class="reveal sh"><span class="st">Core Shield</span><div class="sl"></div></div>
+      <div class="about-grid">
+        <div class="reveal avatar-wrap" data-delay="0.05">
+            <img class="avatar" src="balance.jpg" alt="Balance Avatar">
+        </div>
+        <div class="reveal about-content" data-delay="0.1">
+          <h3>What Is Balance?</h3>
+          <p>Balance is a Discord antinuke and security bot engineered to make server destruction <em>impossible.</em> It monitors every privileged action through the audit log — before any damage can take hold.</p>
+          <p>Unlike bots that rely on intent detection or message scanning, Balance hooks directly into <em>Discord's audit log</em> — meaning even bots with Administrator cannot bypass it. Mass-deletes, channel nukes, role wipes — all caught and reversed in under a second.</p>
+          <p style="color:var(--dim)">Built for communities that have something worth protecting.</p>
+          <a href="https://discord.com/oauth2/authorize?client_id=1514247345804411042&permissions=8&integration_type=0&scope=bot" target="_blank" rel="noopener" class="invite-btn">
+            <span class="badge-dot"></span>Add Balance to Your Server ↗
+          </a>
+          <a href="https://discord.gg/p64FJpFN9M" target="_blank" rel="noopener" class="secondary-btn">Support Server ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="sep">
+      <div class="reveal sh"><span class="st">Features</span><div class="sl"></div></div>
+      <ul class="pl" id="features-list"></ul>
+    </section>
+
+    <!-- COMMANDS -->
+    <section id="commands" class="sep">
+      <div class="reveal sh"><span class="st">Commands</span><div class="sl"></div></div>
+      <ul class="pl" id="commands-list"></ul>
+    </section>
+
+    <!-- WHY / SPECS -->
+    <section id="why" class="sep">
+      <div class="reveal sh"><span class="st">Why Balance</span><div class="sl"></div></div>
+      <div class="skills-grid" id="specs-grid"></div>
+    </section>
+
+    <!-- BOT TIMELINE -->
+    <section id="bot" class="sep">
+      <div class="reveal sh"><span class="st">How It Works</span><div class="sl"></div></div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <!-- CHAT / INVITE SECTION -->
+    <section id="chat-section" class="sep">
+      <div class="reveal sh"><span class="st">Ask Balance — AI</span><div class="sl"></div></div>
+      <div class="chat-layout">
+        <div class="reveal chat-intro" data-delay="0.05">
+          <p><strong style="color:var(--fg);font-weight:700">BalanceAI</strong> is the assistant built into the Balance ecosystem. Ask anything about setup, features, protection levels, or commands.</p>
+          <p>Powered by the Anthropic API and deployed 24/7 — same philosophy as the bot itself.</p>
+          <p>Try it right here:</p>
+          <div class="chat-quick" id="quick-chips"></div>
+        </div>
+        <div class="reveal" data-delay="0.1">
+          <div class="chat-card">
+            <div class="chat-hdr">
+              <div class="chat-hdr-left">
+                <div class="chat-av">BL</div>
+                <div>
+                  <div class="chat-name">BALANCE AI</div>
+                  <div class="chat-status"><span class="online-dot"></span>Online · Anthropic</div>
+                </div>
+              </div>
+              <button class="clear-btn" id="clear-chat">Clear</button>
+            </div>
+            <div class="chat-msgs" id="chat-msgs"></div>
+            <div class="qr-row" id="qr-row" style="display:none"></div>
+            <div class="chat-input-row">
+              <input class="chat-input" id="chat-input" type="text" placeholder="Ask about Balance...">
+              <button class="chat-send" id="chat-send">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVITE -->
+    <section id="invite" class="sep">
+      <div class="reveal sh"><span class="st">Invite</span><div class="sl"></div></div>
+      <div class="reveal" data-delay="0.05">
+        <div class="soc">
+          <a href="https://discord.com/api/oauth2/authorize?client_id=YOUR_BOT_ID&permissions=8&scope=bot%20applications.commands" target="_blank" rel="noopener" class="slink">Add to Server ↗</a>
+          <a href="https://discord.gg/yourserver" target="_blank" rel="noopener" class="slink">Support Discord ↗</a>
+          <button class="copy-btn" id="copy-invite">Copy Invite Link</button>
+        </div>
+      </div>
+      <div class="reveal" data-delay="0.15" style="margin-top:64px">
+        <div class="testi-wrap">
+          <div class="testi-track" id="testi-track"></div>
+          <div class="testi-nav">
+            <button class="testi-btn" id="testi-prev">←</button>
+            <button class="testi-btn" id="testi-next">→</button>
+            <div class="tdots" id="tdots"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="sep">
+      <div class="reveal sh"><span class="st">FAQ</span><div class="sl"></div></div>
+      <ul class="flist" id="faq-list"></ul>
+    </section>
+
+    <footer>
+      <span>⚖ Balance Security Bot</span>
+      <span style="font-size:9px;letter-spacing:.18em">ANTINUKE · MODERATION · PROTECTION — DISCORD BOT</span>
+    </footer>
+  </main>
+</div>
+
+<script src="script.js"></script>
+<script>
+// Listen for login success message from popup
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.login_success) {
+    // Login was successful, redirect to dashboard
+    window.location.href = '/dashboard';
+  }
+});
+
+// Check for login completion from Discord popup (fallback)
+function checkLoginStatus() {
+  // Poll to check if user is logged in (from the popup completing OAuth)
+  const checkInterval = setInterval(() => {
+    fetch('/api/check-auth')
+      .then(response => response.json())
+      .then(data => {
+        if (data.logged_in) {
+          clearInterval(checkInterval);
+          // Redirect to dashboard
+          window.location.href = '/dashboard';
+        }
+      })
+      .catch(() => {
+        // Ignore errors, keep checking
+      });
+  }, 1000); // Check every second
+
+  // Stop checking after 2 minutes
+  setTimeout(() => {
+    clearInterval(checkInterval);
+  }, 120000);
+}
+
+// Start checking when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  // Only check if we're not already on dashboard
+  if (!window.location.pathname.includes('/dashboard')) {
+    checkLoginStatus();
+  }
+});
+</script>
+</body>
+</html>

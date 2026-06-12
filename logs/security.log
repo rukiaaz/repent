@@ -1,0 +1,1301 @@
+2026-06-08 00:13:47 - SECURITY - Failed to load cog cogs.antinuke
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\antinuke.py", line 793, in setup
+    await bot.add_cog(Antinuke(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'restore' already registered.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 59, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.antinuke' raised an error: CommandAlreadyRegistered: Command 'restore' already registered.
+2026-06-08 00:13:47 - SECURITY - Failed to sync commands
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 66, in setup_hook
+    await self.tree.sync()
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 1134, in sync
+    raise CommandSyncFailure(e, commands) from None
+discord.app_commands.errors.CommandSyncFailure: Failed to upload commands to Discord (HTTP status 400, error code 50035)
+In group 'backup' defined in module 'cogs.backup'
+  In command 'backup restore' defined in function 'Backup.BackupGroup.restore'
+    description: Must be between 1 and 100 in length.
+2026-06-08 00:25:57 - SECURITY - Failed to load cog cogs.antinuke
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\antinuke.py", line 793, in setup
+    await bot.add_cog(Antinuke(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'antinuke_restore' already registered.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 59, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.antinuke' raised an error: CommandAlreadyRegistered: Command 'antinuke_restore' already registered.
+2026-06-08 00:32:50 - SECURITY - Failed to load cog cogs.antinuke
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\antinuke.py", line 793, in setup
+    await bot.add_cog(Antinuke(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'antinuke_restore' already registered.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 59, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.antinuke' raised an error: CommandAlreadyRegistered: Command 'antinuke_restore' already registered.
+2026-06-08 01:22:14 - SECURITY - EVENT: ANTINUKE_TRIGGER | DETAILS: Action: channel_create, Punishment: kick | GUILD: 1512695207206981766 | USER: 1510127231932956672
+2026-06-08 01:22:14 - SECURITY - EVENT: ANTINUKE_TRIGGER | DETAILS: Action: channel_create, Punishment: kick | GUILD: 1512695207206981766 | USER: 1510127231932956672
+2026-06-08 01:22:15 - SECURITY - EVENT: ANTINUKE_TRIGGER | DETAILS: Action: channel_create, Punishment: kick | GUILD: 1512695207206981766 | USER: 1510127231932956672
+2026-06-08 01:22:15 - SECURITY - EVENT: ANTINUKE_TRIGGER | DETAILS: Action: channel_create, Punishment: kick | GUILD: 1512695207206981766 | USER: 1510127231932956672
+2026-06-08 01:36:36 - SECURITY - Channel 1513235120205594854 not found in cache
+2026-06-08 01:36:38 - SECURITY - Channel 1513235120205594854 not found in cache
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 0 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 1 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 12:57:12 - SECURITY - Layer 2 failed: '>' not supported between instances of 'ThreatLevel' and 'ThreatLevel'
+NoneType: None
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:00 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654327
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.86, Types: sequential, new_account | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 123456789 | USER: 987654324
+2026-06-08 13:00:41 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 123456789 | USER: 987654327
+2026-06-08 13:54:24 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 1512695207206981766 | USER: 1415996915329400872
+2026-06-08 13:54:24 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.90, Types: new_account | GUILD: 1512695207206981766 | USER: 1415996915329400872
+2026-06-08 13:54:49 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action server_update denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:51 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:51 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:51 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:52 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:52 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:52 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:52 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:54:53 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:21 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:56:23 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:19 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:20 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:21 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:57:22 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:14 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:15 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1510854558929125416 | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:16 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:16 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:16 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:16 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 13:59:17 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1510854558929125416
+2026-06-08 14:38:56 - SECURITY - Channel 1513431411032457226 not found in cache
+2026-06-09 22:31:15 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 137, in on_guild_join
+    await owner.send(embed=embed)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-09 22:34:09 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 137, in on_guild_join
+    await owner.send(embed=embed)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-11 04:02:03 - SECURITY - Failed to load cog cogs.enhanced_antiraid
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\antinukes\repentv3\cogs\enhanced_antiraid.py", line 21, in <module>
+    class EnhancedAntiRaid(commands.Cog):
+    ...<361 lines>...
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+  File "D:\antinukes\repentv3\cogs\enhanced_antiraid.py", line 176, in EnhancedAntiRaid
+    @app_commands.command(name="raid", description="Manage anti-raid configuration (Admin only)")
+     ^^^^^^^^^^^^
+NameError: name 'app_commands' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 83, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.enhanced_antiraid' raised an error: NameError: name 'app_commands' is not defined
+2026-06-11 04:06:37 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 149, in on_guild_join
+    await owner.send(embed=embed)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-11 04:09:16 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 149, in on_guild_join
+    await owner.send(embed=embed)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-11 04:11:14 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 149, in on_guild_join
+    await owner.send(embed=embed)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-11 04:21:50 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 156, in on_guild_join
+    async def _validate_guild_permissions(self, guild: discord.Guild):
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-11 04:21:50 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 149, in on_guild_join
+    await owner.send(embed=embed)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-11 04:21:51 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 156, in on_guild_join
+    async def _validate_guild_permissions(self, guild: discord.Guild):
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-11 19:01:54 - SECURITY - Failed to load cog cogs.advanced_logging
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\antinukes\repentv3\cogs\advanced_logging.py", line 18, in <module>
+    class AdvancedLogging(commands.Cog):
+    ...<381 lines>...
+                            self.logger.error(f"Failed to log nickname change for {after.id}", exc_info=True)
+  File "D:\antinukes\repentv3\cogs\advanced_logging.py", line 27, in AdvancedLogging
+    @app_commands.command(name="logging", description="Configure advanced logging (Admin only)")
+     ^^^^^^^^^^^^
+NameError: name 'app_commands' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 83, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.advanced_logging' raised an error: NameError: name 'app_commands' is not defined
+2026-06-11 19:01:54 - SECURITY - Failed to load cog cogs.antinuke
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\antinukes\repentv3\cogs\antinuke.py", line 83, in <module>
+    class Antinuke(commands.Cog):
+    ...<1090 lines>...
+            await interaction.response.send_message(embed=embed, ephemeral=False)
+  File "D:\antinukes\repentv3\cogs\antinuke.py", line 1123, in Antinuke
+    @app_commands.describe(limit="Number of events to show (1-50)")
+     ^^^^^^^^^^^^
+NameError: name 'app_commands' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 83, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.antinuke' raised an error: NameError: name 'app_commands' is not defined
+2026-06-11 19:01:54 - SECURITY - Failed to load cog cogs.automod
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\antinukes\repentv3\cogs\automod.py", line 83, in <module>
+    class AutoMod(commands.Cog):
+    ...<502 lines>...
+            await interaction.response.send_message(embed=embed, ephemeral=False)
+  File "D:\antinukes\repentv3\cogs\automod.py", line 484, in AutoMod
+    @app_commands.describe(action="enable or disable")
+     ^^^^^^^^^^^^
+NameError: name 'app_commands' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 83, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.automod' raised an error: NameError: name 'app_commands' is not defined
+2026-06-11 19:01:54 - SECURITY - Failed to load cog cogs.security_scanner
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\antinukes\repentv3\cogs\security_scanner.py", line 21, in <module>
+    class SecurityScanner(commands.Cog):
+    ...<265 lines>...
+                self.logger.error(f"Failed to notify staff about token grabber: {e}", exc_info=True)
+  File "D:\antinukes\repentv3\cogs\security_scanner.py", line 73, in SecurityScanner
+    @app_commands.command(name="antitoken", description="Configure anti-token grabber detection (Admin only)")
+     ^^^^^^^^^^^^
+NameError: name 'app_commands' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 83, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.security_scanner' raised an error: NameError: name 'app_commands' is not defined
+2026-06-11 19:01:54 - SECURITY - Failed to load cog cogs.utility
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\utility.py", line 656, in setup
+    await bot.add_cog(Utility(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 83, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.utility' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-11 19:39:13 - SECURITY - Failed to load cog cogs.verification
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\verification.py", line 318, in setup
+    await bot.add_cog(Verification(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.verification' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-11 19:39:13 - SECURITY - Failed to load cog cogs.welcome
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\welcome.py", line 295, in setup
+    await bot.add_cog(Welcome(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.welcome' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-11 19:41:38 - SECURITY - Failed to load cog cogs.antinuke
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\antinukes\repentv3\cogs\antinuke.py", line 83, in <module>
+    class Antinuke(commands.Cog):
+    ...<1090 lines>...
+            await interaction.response.send_message(embed=embed, ephemeral=False)
+  File "D:\antinukes\repentv3\cogs\antinuke.py", line 1123, in Antinuke
+    @app_commands.describe(limit="Number of events to show (1-50)")
+     ^^^^^^^^^^^^
+NameError: name 'app_commands' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.antinuke' raised an error: NameError: name 'app_commands' is not defined
+2026-06-11 19:41:38 - SECURITY - Failed to load cog cogs.automod
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\antinukes\repentv3\cogs\automod.py", line 83, in <module>
+    class AutoMod(commands.Cog):
+    ...<502 lines>...
+            await interaction.response.send_message(embed=embed, ephemeral=False)
+  File "D:\antinukes\repentv3\cogs\automod.py", line 484, in AutoMod
+    @app_commands.describe(action="enable or disable")
+     ^^^^^^^^^^^^
+NameError: name 'app_commands' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.automod' raised an error: NameError: name 'app_commands' is not defined
+2026-06-11 19:41:39 - SECURITY - Failed to load cog cogs.verification
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\verification.py", line 318, in setup
+    await bot.add_cog(Verification(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.verification' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-11 19:41:39 - SECURITY - Failed to load cog cogs.welcome
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\welcome.py", line 295, in setup
+    await bot.add_cog(Welcome(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.welcome' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-11 19:46:24 - SECURITY - Failed to load cog cogs.utility
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\utility.py", line 627, in setup
+    await bot.add_cog(Utility(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 90, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.utility' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-11 23:47:20 - SECURITY - Failed to load cog cogs.utility
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\antinukes\repentv3\cogs\utility.py", line 627, in setup
+    await bot.add_cog(Utility(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 71, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.utility' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-12 01:47:24 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 163, in on_guild_join
+    critical_permissions = [
+            ^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-12 01:50:48 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 161, in on_guild_join
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-12 01:52:24 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 161, in on_guild_join
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-12 01:53:27 - SECURITY - Failed to notify owner of new guild
+Traceback (most recent call last):
+  File "D:\antinukes\repentv3\main.py", line 164, in on_guild_join
+    ("administrator", "Administrator"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\abc.py", line 1618, in send
+    data = await state.http.send_message(channel.id, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds

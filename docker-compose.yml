@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  balance-bot:
+    build: .
+    container_name: balance-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./cogs:/app/cogs
+      - ./utils:/app/utils
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  data:

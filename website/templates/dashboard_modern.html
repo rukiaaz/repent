@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance — Server Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/modern-theme.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <a href="/" class="logo">
+                <div class="logo-icon">B</div>
+                <span>Balance</span>
+            </a>
+            
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="{{ user.username }}">
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ user.username }}</div>
+                    <div class="user-status">Admin</div>
+                </div>
+                <a href="/logout" class="btn btn-secondary btn-sm">Logout</a>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Main</div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="sidebar-link active" data-section="overview">
+                        <span class="sidebar-link-icon"><i class="fas fa-home"></i></span>
+                        <span>Overview</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="servers">
+                        <span class="sidebar-link-icon"><i class="fas fa-server"></i></span>
+                        <span>Servers</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Moderation</div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="sidebar-link" data-section="actions">
+                        <span class="sidebar-link-icon"><i class="fas fa-bolt"></i></span>
+                        <span>Quick Actions</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="users">
+                        <span class="sidebar-link-icon"><i class="fas fa-users"></i></span>
+                        <span>User Management</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="warnings">
+                        <span class="sidebar-link-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                        <span>Warnings</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Channels</div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="sidebar-link" data-section="channels">
+                        <span class="sidebar-link-icon"><i class="fas fa-hashtag"></i></span>
+                        <span>Channel Control</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="slowmode">
+                        <span class="sidebar-link-icon"><i class="fas fa-clock"></i></span>
+                        <span>Slowmode</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Roles</div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="sidebar-link" data-section="roles">
+                        <span class="sidebar-link-icon"><i class="fas fa-shield-alt"></i></span>
+                        <span>Role Management</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="permissions">
+                        <span class="sidebar-link-icon"><i class="fas fa-user-lock"></i></span>
+                        <span>Permissions</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Protection</div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="sidebar-link" data-section="antinuke">
+                        <span class="sidebar-link-icon"><i class="fas fa-shield-alt"></i></span>
+                        <span>Antinuke</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="whitelist">
+                        <span class="sidebar-link-icon"><i class="fas fa-check-circle"></i></span>
+                        <span>Whitelist</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="automod">
+                        <span class="sidebar-link-icon"><i class="fas fa-robot"></i></span>
+                        <span>AutoMod</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Tools</div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="sidebar-link" data-section="backup">
+                        <span class="sidebar-link-icon"><i class="fas fa-database"></i></span>
+                        <span>Backup</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="logging">
+                        <span class="sidebar-link-icon"><i class="fas fa-file-alt"></i></span>
+                        <span>Logs</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-section="config">
+                        <span class="sidebar-link-icon"><i class="fas fa-cog"></i></span>
+                        <span>Configuration</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Overview Section -->
+            <section id="overview-section" class="content-section active">
+                <div class="section-header">
+                    <h1 class="section-title">Dashboard Overview</h1>
+                    <p class="section-subtitle">Welcome back! Here's what's happening with your servers.</p>
+                </div>
+
+                <div class="grid grid-4" style="margin-bottom: 32px;">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-server"></i></div>
+                        <div class="stat-value">{{ guilds|length }}</div>
+                        <div class="stat-label">Protected Servers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Actions Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Active Threats</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div class="stat-value">100%</div>
+                        <div class="stat-label">Protection Rate</div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Activity</h3>
+                    <button class="btn btn-secondary btn-sm">View All</button>
+                    </div>
+                    <div class="table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Server</th>
+                                    <th>User</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Dashboard Login</td>
+                                    <td>System</td>
+                                    <td>{{ user.username }}</td>
+                                    <td>Just now</td>
+                                    <td><span class="status-indicator"><span class="status-dot"></span>Complete</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Quick Actions</h3>
+                        </div>
+                        <div class="action-grid">
+                            <div class="action-card" onclick="showSection('actions')">
+                                <div class="action-icon"><i class="fas fa-ban"></i></div>
+                                <div class="action-title">Ban User</div>
+                            </div>
+                            <div class="action-card" onclick="showSection('actions')">
+                                <div class="action-icon"><i class="fas fa-user-minus"></i></div>
+                                <div class="action-title">Kick User</div>
+                            </div>
+                            <div class="action-card" onclick="showSection('actions')">
+                                <div class="action-icon"><i class="fas fa-clock"></i></div>
+                                <div class="action-title">Timeout</div>
+                            </div>
+                            <div class="action-card" onclick="showSection('channels')">
+                                <div class="action-icon"><i class="fas fa-lock"></i></div>
+                                <div class="action-title">Lock Channel</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Protection Status</h3>
+                        </div>
+                        <div style="padding: 20px 0;">
+                            <div style="margin-bottom: 16px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">Antinuke</span>
+                                    <span style="color: var(--brand-success); font-weight: 600;">Active</span>
+                                </div>
+                                <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: 100%; height: 100%; background: var(--brand-success); border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">AutoMod</span>
+                                    <span style="color: var(--brand-success); font-weight: 600;">Active</span>
+                                </div>
+                                <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: 100%; height: 100%; background: var(--brand-success); border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">Anti-Raid</span>
+                                    <span style="color: var(--brand-success); font-weight: 600;">Active</span>
+                                </div>
+                                <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: 100%; height: 100%; background: var(--brand-success); border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Servers Section -->
+            <section id="servers-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Your Servers</h1>
+                    <p class="section-subtitle">Managing {{ guilds|length }} servers with administrator permissions (out of {{ total_guilds }} total)</p>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">Server Selection</h3>
+                        <select id="server-select" class="form-select" style="width: 300px;">
+                            <option value="">Select a server...</option>
+                            {% for guild in guilds %}
+                            <option value="{{ guild.id }}">{{ guild.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-3" id="servers-grid">
+                    {% for guild in guilds %}
+                    <div class="server-card" data-guild-id="{{ guild.id }}">
+                        <div class="server-icon">
+                            {% if guild.icon %}
+                            <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" alt="{{ guild.name }}">
+                            {% else %}
+                            <div class="server-icon-placeholder">{{ guild.name[0] }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="server-info">
+                            <div class="server-name">{{ guild.name }}</div>
+                            <div class="server-meta">
+                                <span class="badge badge-owner">👑 Owner</span>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-primary btn-sm" onclick="selectServer('{{ guild.id }}')">Manage</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Quick Actions Section -->
+            <section id="actions-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Moderation Actions</h1>
+                    <p class="section-subtitle">Execute moderation commands across your servers</p>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="moderation">Moderation</button>
+                        <button class="tab" data-tab="channel">Channel</button>
+                        <button class="tab" data-tab="role">Role</button>
+                        <button class="tab" data-tab="advanced">Advanced</button>
+                    </div>
+
+                    <!-- Moderation Tab -->
+                    <div id="moderation-tab" class="tab-content active">
+                        <div class="form-group">
+                            <label class="form-label">Select Server</label>
+                            <select id="action-server-select" class="form-select">
+                                <option value="">Select a server...</option>
+                                {% for guild in guilds %}
+                                <option value="{{ guild.id }}">{{ guild.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="grid grid-2" style="margin-bottom: 24px;">
+                            <div class="form-group">
+                                <label class="form-label">Target User</label>
+                                <input type="text" id="action-target" class="form-input" placeholder="User ID or @mention">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Reason</label>
+                                <input type="text" id="action-reason" class="form-input" placeholder="Reason for action">
+                            </div>
+                        </div>
+
+                        <div class="action-grid">
+                            <div class="action-card danger" onclick="executeAction('ban')">
+                                <div class="action-icon"><i class="fas fa-ban"></i></div>
+                                <div class="action-title">Ban User</div>
+                            </div>
+                            <div class="action-card warning" onclick="executeAction('kick')">
+                                <div class="action-icon"><i class="fas fa-user-minus"></i></div>
+                                <div class="action-title">Kick User</div>
+                            </div>
+                            <div class="action-card warning" onclick="executeAction('timeout')">
+                                <div class="action-icon"><i class="fas fa-clock"></i></div>
+                                <div class="action-title">Timeout</div>
+                            </div>
+                            <div class="action-card info" onclick="executeAction('warn')">
+                                <div class="action-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                                <div class="action-title">Warn User</div>
+                            </div>
+                            <div class="action-card" onclick="executeAction('purge')">
+                                <div class="action-icon"><i class="fas fa-trash"></i></div>
+                                <div class="action-title">Purge Messages</div>
+                            </div>
+                            <div class="action-card danger" onclick="executeAction('hardban')">
+                                <div class="action-icon"><i class="fas fa-gavel"></i></div>
+                                <div class="action-title">Hardban</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Channel Control Section -->
+            <section id="channels-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Channel Control</h1>
+                    <p class="section-subtitle">Lock, unlock, and manage channel permissions</p>
+                </div>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label class="form-label">Select Server</label>
+                        <select id="channel-server-select" class="form-select">
+                            <option value="">Select a server...</option>
+                            {% for guild in guilds %}
+                            <option value="{{ guild.id }}">{{ guild.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Select Channel</label>
+                        <select id="channel-select" class="form-select">
+                            <option value="">Select a channel...</option>
+                        </select>
+                    </div>
+
+                    <div class="action-grid">
+                        <div class="action-card warning" onclick="channelAction('lock')">
+                            <div class="action-icon"><i class="fas fa-lock"></i></div>
+                            <div class="action-title">Lock Channel</div>
+                        </div>
+                        <div class="action-card success" onclick="channelAction('unlock')">
+                            <div class="action-icon"><i class="fas fa-lock-open"></i></div>
+                            <div class="action-title">Unlock Channel</div>
+                        </div>
+                        <div class="action-card info" onclick="channelAction('slowmode')">
+                            <div class="action-icon"><i class="fas fa-clock"></i></div>
+                            <div class="action-title">Set Slowmode</div>
+                        </div>
+                        <div class="action-card" onclick="channelAction('clearslowmode')">
+                            <div class="action-icon"><i class="fas fa-times-circle"></i></div>
+                            <div class="action-title">Clear Slowmode</div>
+                        </div>
+                    </div>
+
+                    <div id="slowmode-settings" style="display: none; margin-top: 24px;">
+                        <div class="form-group">
+                            <label class="form-label">Slowmode Duration (seconds)</label>
+                            <input type="number" id="slowmode-duration" class="form-input" placeholder="0 = disabled, max 21600">
+                        </div>
+                        <button class="btn btn-primary" onclick="applySlowmode()">Apply Slowmode</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- User Management Section -->
+            <section id="users-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">User Management</h1>
+                    <p class="section-subtitle">Search and manage server members</p>
+                </div>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label class="form-label">Select Server</label>
+                        <select id="user-server-select" class="form-select">
+                            <option value="">Select a server...</option>
+                            {% for guild in guilds %}
+                            <option value="{{ guild.id }}">{{ guild.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Search User</label>
+                        <input type="text" id="user-search" class="form-input" placeholder="Search by username or ID">
+                    </div>
+
+                    <div class="table" style="margin-top: 24px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>ID</th>
+                                    <th>Joined</th>
+                                    <th>Roles</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-table-body">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-secondary);">
+                                        Select a server to view members
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Antinuke Configuration Section -->
+            <section id="antinuke-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Antinuke Configuration</h1>
+                    <p class="section-subtitle">Configure antinuke protection levels and thresholds</p>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Protection Status</h3>
+                        </div>
+                        <div style="padding: 20px 0;">
+                            <div style="margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">Antinuke Status</span>
+                                    <div class="status-indicator" style="padding: 4px 12px;">
+                                        <span class="status-dot"></span>
+                                        <span>Active</span>
+                                    </div>
+                                </div>
+                                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+                                    Real-time audit log monitoring with instant threat detection and response.
+                                </p>
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">Default Punishment</span>
+                                    <select class="form-select" style="width: auto;">
+                                        <option>Ban</option>
+                                        <option>Kick</option>
+                                        <option>Strip Roles</option>
+                                        <option>Timeout</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" style="width: 100%;">Update Configuration</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Detection Thresholds</h3>
+                        </div>
+                        <div style="padding: 20px 0;">
+                            <div class="form-group">
+                                <label class="form-label">Max Channel Deletes (per minute)</label>
+                                <input type="number" class="form-input" value="3" min="1" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Role Deletes (per minute)</label>
+                                <input type="number" class="form-input" value="2" min="1" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Kick Rate (per minute)</label>
+                                <input type="number" class="form-input" value="5" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Ban Rate (per minute)</label>
+                                <input type="number" class="form-input" value="3" min="1" max="10">
+                            </div>
+                            <button class="btn btn-primary" style="width: 100%;">Save Thresholds</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Whitelist Management Section -->
+            <section id="whitelist-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Whitelist Management</h1>
+                    <p class="section-subtitle">Manage users, bots, and roles with antinuke immunity</p>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab active" data-whitelist-tab="users">Users</button>
+                    <button class="tab" data-whitelist-tab="bots">Bots</button>
+                    <button class="tab" data-whitelist-tab="roles">Roles</button>
+                </div>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label class="form-label">Select Server</label>
+                        <select id="whitelist-server-select" class="form-select">
+                            <option value="">Select a server...</option>
+                            {% for guild in guilds %}
+                            <option value="{{ guild.id }}">{{ guild.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="display: flex; gap: 16px;">
+                        <input type="text" id="whitelist-input" class="form-input" placeholder="User ID, Bot ID, or @mention" style="flex: 1;">
+                        <button class="btn btn-success">Add to Whitelist</button>
+                    </div>
+
+                    <div class="table" style="margin-top: 24px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Entity</th>
+                                    <th>Type</th>
+                                    <th>Added By</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-secondary);">
+                                    No whitelisted entities in this server
+                                </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Role Management Section -->
+            <section id="roles-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Role Management</h1>
+                    <p class="section-subtitle">Add and remove roles from users</p>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Add Role to User</h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Server</label>
+                            <select id="role-server-select" class="form-select">
+                                <option value="">Select a server...</option>
+                                {% for guild in guilds %}
+                                <option value="{{ guild.id }}">{{ guild.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">User</label>
+                            <input type="text" id="role-user-input" class="form-input" placeholder="User ID or @mention">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Role</label>
+                            <select id="role-select" class="form-select">
+                                <option value="">Select a role...</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-success" style="width: 100%;">Add Role</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Remove Role from User</h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Server</label>
+                            <select id="role-remove-server-select" class="form-select">
+                                <option value="">Select a server...</option>
+                                {% for guild in guilds %}
+                                <option value="{{ guild.id }}">{{ guild.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">User</label>
+                            <input type="text" id="role-remove-user-input" class="form-input" placeholder="User ID or @mention">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Role</label>
+                            <select id="role-remove-select" class="form-select">
+                                <option value="">Select a role...</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-danger" style="width: 100%;">Remove Role</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Backup Section -->
+            <section id="backup-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Backup & Restore</h1>
+                    <p class="section-subtitle">Create server snapshots and restore from backups</p>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Create Backup</h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Server</label>
+                            <select id="backup-server-select" class="form-select">
+                                <option value="">Select a server...</option>
+                                {% for guild in guilds %}
+                                <option value="{{ guild.id }}">{{ guild.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Backup Type</label>
+                            <select class="form-select">
+                                <option>Full Server (Channels + Roles)</option>
+                                <option>Channels Only</option>
+                                <option>Roles Only</option>
+                                <option>Settings Only</option>
+                            </select>
+                        </div>
+                        <div style="padding: 20px 0;">
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+                                <i class="fas fa-info-circle"></i> Backups are stored securely and can be used to recover from nukes or accidental deletions.
+                            </p>
+                            <button class="btn btn-primary" style="width: 100%;">Create Backup</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Restore from Backup</h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Server</label>
+                            <select id="restore-server-select" class="form-select">
+                                <option value="">Select a server...</option>
+                                {% for guild in guilds %}
+                                <option value="{{ guild.id }}">{{ guild.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Backup</label>
+                            <select class="form-select">
+                                <option>Select a backup to restore...</option>
+                                <option>Backup from 2026-06-12 14:30</option>
+                                <option>Backup from 2026-06-12 10:15</option>
+                                <option>Backup from 2026-06-11 23:45</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Restore Options</label>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" checked> Restore Channels
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" checked> Restore Roles
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox"> Restore Permissions
+                                </label>
+                            </div>
+                        </div>
+                        <button class="btn btn-warning" style="width: 100%;">Restore Backup</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logging Section -->
+            <section id="logging-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Audit Logs</h1>
+                    <p class="section-subtitle">View moderation and system activity logs</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Log Filters</h3>
+                        <div style="display: flex; gap: 12px;">
+                            <select class="form-select" style="width: auto;">
+                                <option value="all">All Actions</option>
+                                <option value="ban">Bans</option>
+                                <option value="kick">Kicks</option>
+                                <option value="timeout">Timeouts</option>
+                                <option value="warn">Warnings</option>
+                                <option value="channel">Channel Actions</option>
+                            </select>
+                            <select class="form-select" style="width: auto;">
+                                <option value="7">Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Target</th>
+                                    <th>Moderator</th>
+                                    <th>Reason</th>
+                                    <th>Time</th>
+                                    <th>Server</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: var(--text-secondary);">
+                                        No logs found for the selected filters
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Configuration Section -->
+            <section id="config-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Server Configuration</h1>
+                    <p class="section-subtitle">Configure bot settings and preferences</p>
+                </div>
+
+                <div class="card">
+                    <div class="form-group">
+                        <label class="form-label">Select Server</label>
+                        <select id="config-server-select" class="form-select">
+                            <option value="">Select a server...</option>
+                            {% for guild in guilds %}
+                            <option value="{{ guild.id }}">{{ guild.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="grid grid-2" style="margin-top: 24px;">
+                        <div>
+                            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Logging Channels</h3>
+                            <div class="form-group">
+                                <label class="form-label">Moderation Logs</label>
+                                <select class="form-select">
+                                    <option value="">Select channel...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Audit Logs</label>
+                                <select class="form-select">
+                                    <option value="">Select channel...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Join/Leave Logs</label>
+                                <select class="form-select">
+                                    <option value="">Select channel...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Bot Settings</h3>
+                            <div class="form-group">
+                                <label class="form-label">Language</label>
+                                <select class="form-select">
+                                    <option>English</option>
+                                    <option>Spanish</option>
+                                    <option>French</option>
+                                    <option>German</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Prefix</label>
+                                <input type="text" class="form-input" value="/" placeholder="Bot prefix">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-light);">
+                        <button class="btn btn-primary">Save Configuration</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Placeholders for other sections -->
+            <section id="warnings-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Warnings Management</h1>
+                    <p class="section-subtitle">View and manage user warnings</p>
+                </div>
+                <div class="card">
+                    <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+                        Select a server to view warnings
+                    </p>
+                </div>
+            </section>
+
+            <section id="slowmode-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Slowmode Settings</h1>
+                    <p class="section-subtitle">Configure slowmode for channels</p>
+                </div>
+                <div class="card">
+                    <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+                        Please use the Channel Control section for slowmode management
+                    </p>
+                </div>
+            </section>
+
+            <section id="permissions-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">Permission Management</h1>
+                    <p class="section-subtitle">Manage channel and role permissions</p>
+                </div>
+                <div class="card">
+                    <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+                        Coming soon - Full permission editor
+                    </p>
+                </div>
+            </section>
+
+            <section id="automod-section" class="content-section">
+                <div class="section-header">
+                    <h1 class="section-title">AutoMod Configuration</h1>
+                    <p class="section-subtitle">Configure automated content filtering and spam protection</p>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Spam Protection</h3>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Max Messages per Minute</label>
+                            <input type="number" class="form-input" value="10" min="1" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Mentions per Message</label>
+                            <input type="number" class="form-input" value="5" min="1" max="20">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Links per Message</label>
+                            <input type="number" class="form-input" value="3" min="0" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Caps per Message</label>
+                            <input type="number" class="form-input" value="10" min="0" max="50">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Content Filtering</h3>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Banned Words</label>
+                            <textarea class="form-input" placeholder="Enter words separated by commas" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Banned Domains</label>
+                            <textarea class="form-input" placeholder="Enter domains separated by commas" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Invite Link Protection</label>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" checked>
+                                <span style="font-size: 13px; color: var(--text-secondary);">Delete all invite links</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Exempt Roles</label>
+                            <select class="form-select" multiple>
+                                <option value="">Select roles to exempt...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">Mass Mention Protection</h3>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-2" style="margin-top: 24px;">
+                        <div class="form-group">
+                            <label class="form-label">Mention Threshold</label>
+                            <input type="number" class="form-input" value="5" min="1" max="20">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Action</label>
+                            <select class="form-select">
+                                <option>Auto Delete</option>
+                                <option>Warn User</option>
+                                <option>Timeout User</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" style="margin-top: 24px;">Save AutoMod Settings</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="action-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Confirm Action</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-description" id="modal-description">Are you sure you want to perform this action?</div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="modal-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/dashboard_modern.js"></script>
+</body>
+</html>

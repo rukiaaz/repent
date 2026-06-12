@@ -171,6 +171,15 @@ class Antinuke(commands.Cog):
         # Safe admins JSON cache: {guild_id: (parsed_list, settings_timestamp)}
         self._safe_admins_cache: Dict[int, Tuple[List[int], str, datetime]] = {}
         self._safe_admins_cache_ttl = 180  # 3 minutes for safe admins
+        
+        # Circuit breaker for parallel attacks: {(guild_id, user_id): punishment_timestamp}
+        self._punished_users_cache: Dict[Tuple[int, int], datetime] = {}
+        
+        # Emergency mode tracking: guilds currently in lockdown
+        self._emergency_mode_active: Set[int] = set()
+        
+        # Attack detection timestamps per guild
+        self._attack_detected_time: Dict[int, datetime] = {}
 
     def _get_guild_lock(self, guild_id: int) -> asyncio.Lock:
         self._locks.setdefault(guild_id, asyncio.Lock())
@@ -277,6 +286,23 @@ class Antinuke(commands.Cog):
                 removed_events = self.rate_tracker.cleanup_old_events(max_age_seconds=3600)
                 if removed_events > 0:
                     self.logger.debug(f"Cleaned up {removed_events} old rate tracker events")
+                
+                # Clean up punished users cache (circuit breaker)
+                punished_cutoff = datetime.now(timezone.utc) - timedelta(seconds=30)  # 30 seconds
+                old_punished_keys = [key for key, timestamp in self._punished_users_cache.items() if timestamp < punished_cutoff]
+                for key in old_punished_keys:
+                    del self._punished_users_cache[key]
+                if old_punished_keys:
+                    self.logger.debug(f"Cleaned up {len(old_punished_keys)} old punished user entries")
+                
+                # Clean up emergency mode (lift lockdown after 5 minutes)
+                emergency_cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+                old_emergency_guilds = [guild_id for guild_id, timestamp in self._attack_detected_time.items() if timestamp < emergency_cutoff]
+                for guild_id in old_emergency_guilds:
+                    self._emergency_mode_active.discard(guild_id)
+                    del self._attack_detected_time[guild_id]
+                if old_emergency_guilds:
+                    self.logger.info(f"Lifted emergency lockdown for {len(old_emergency_guilds)} guilds")
                     
             except asyncio.CancelledError:
                 break
@@ -1566,6 +1592,99 @@ class Antinuke(commands.Cog):
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry):
         await self.process_audit_entry(entry)
+
+    # FAST-PATH: Direct channel name change detection (bypasses audit log delay)
+    # This is critical for stopping parallel execution attacks like Promise.allSettled
+    @commands.Cog.listener()
+    async def on_guild_channel_update(self, before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
+        """Direct detection of channel name changes - immediate response without audit log delay."""
+        if not before.guild:
+            return
+            
+        # Check if this is a name change
+        if before.name != after.name:
+            # Track channel name changes per guild for rapid attack detection
+            self.rate_tracker.add_event(before.guild.id, 0, "mass_channel_rename")  # user_id 0 = server-wide
+            
+            # EMERGENCY LOCKDOWN: If 5+ channels renamed in 1 second, trigger emergency mode
+            if self.rate_tracker.count_events(before.guild.id, 0, "mass_channel_rename", 1) >= 5:
+                self.logger.security(
+                    "EMERGENCY_LOCKDOWN",
+                    f"Mass channel rename attack detected (parallel execution) - emergency lockdown",
+                    guild_id=before.guild.id
+                )
+                
+                # Put guild in emergency mode
+                self._emergency_mode_active.add(before.guild.id)
+                self._attack_detected_time[before.guild.id] = datetime.now(timezone.utc)
+                
+                # Get the most recent channel updater from audit logs and ban them
+                try:
+                    async for entry in before.guild.audit_logs(action=discord.AuditLogAction.channel_update, limit=5):
+                        if entry.user:
+                            cache_key = (before.guild.id, entry.user.id)
+                            # Circuit breaker: don't punish same user twice in 10 seconds
+                            if cache_key not in self._punished_users_cache or \
+                               datetime.now(timezone.utc) - self._punished_users_cache[cache_key] > timedelta(seconds=10):
+                                await self._handle_instant_punishment(before.guild, entry.user.id, "channel_update",
+                                    "EMERGENCY: Mass parallel channel rename attack detected", False)
+                                self._punished_users_cache[cache_key] = datetime.now(timezone.utc)
+                            break
+                except Exception as e:
+                    self.logger.error(f"Failed emergency punishment: {e}")
+            
+            # If guild is in emergency mode, auto-restore all renamed channels immediately
+            if before.guild.id in self._emergency_mode_active:
+                try:
+                    await after.edit(name=before.name, reason="[Repent] Emergency restoration during attack")
+                    self.logger.security("EMERGENCY_RESTORE", f"Emergency restored channel to '{before.name}'", guild_id=before.guild.id)
+                except Exception as e:
+                    self.logger.error(f"Failed emergency restoration: {e}")
+                return  # Skip further processing during emergency
+            
+            # Find who did this by checking recent audit logs for immediate punishment
+            try:
+                async for entry in before.guild.audit_logs(action=discord.AuditLogAction.channel_update, limit=1):
+                    if entry.target.id == after.id and entry.changes.before.name == before.name:
+                        user = entry.user
+                        if user:
+                            cache_key = (before.guild.id, user.id)
+                            
+                            # Circuit breaker: don't process same user's actions repeatedly
+                            if cache_key in self._punished_users_cache and \
+                               datetime.now(timezone.utc) - self._punished_users_cache[cache_key] < timedelta(seconds=5):
+                                return  # Already punished recently, skip
+                            
+                            # Log this detection
+                            self.logger.security(
+                                "DIRECT_CHANNEL_RENAME",
+                                f"Direct detection: Channel renamed from '{before.name}' to '{after.name}' by {user.id}",
+                                guild_id=before.guild.id,
+                                user_id=user.id
+                            )
+                            
+                            # INSTANT PUNISHMENT - bypass all checks for immediate response
+                            # This is faster than audit log processing for parallel attacks
+                            guild_name_changed = False
+                            try:
+                                await self._handle_instant_punishment(before.guild, user.id, "channel_update", 
+                                    f"PARALLEL ATTACK: Channel renamed from '{before.name}' to '{after.name}' (direct detection)", 
+                                    guild_name_changed)
+                                
+                                # Mark user as punished (circuit breaker)
+                                self._punished_users_cache[cache_key] = datetime.now(timezone.utc)
+                                
+                                # IMMEDIATE RESTORATION - restore this channel name right now
+                                try:
+                                    await after.edit(name=before.name, reason="[Repent] Immediate restoration after parallel attack")
+                                    self.logger.security("IMMEDIATE_RESTORE", f"Restored channel name to '{before.name}'", guild_id=before.guild.id, user_id=user.id)
+                                except Exception as e:
+                                    self.logger.error(f"Failed immediate channel restoration: {e}")
+                            except Exception as e:
+                                self.logger.error(f"Failed instant punishment on direct detection: {e}")
+                        break
+            except Exception as e:
+                self.logger.error(f"Error in direct channel rename detection: {e}")
 
     # Fast-path listeners removed to avoid duplicate audit processing.
     # (They were causing unstable behavior and duplicate incidents.)

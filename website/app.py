@@ -4,9 +4,12 @@ from dotenv import load_dotenv
 import os
 import secrets
 import requests
+import sys
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from parent directory's .env file
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(parent_dir, '.env')
+load_dotenv(env_path)
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
@@ -21,43 +24,67 @@ def proxy_to_bot_api(endpoint: str, method: str = 'GET', data: dict = None):
     
     try:
         if method == 'GET':
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
         elif method == 'POST':
-            response = requests.post(url, headers=headers, json=data)
+            response = requests.post(url, headers=headers, json=data, timeout=10)
         elif method == 'PUT':
-            response = requests.put(url, headers=headers, json=data)
+            response = requests.put(url, headers=headers, json=data, timeout=10)
         elif method == 'DELETE':
-            response = requests.delete(url, headers=headers)
+            response = requests.delete(url, headers=headers, timeout=10)
         else:
             return jsonify({'error': 'Invalid method'}), 400
         
-        return response.json(), response.status_code
+        try:
+            return response.json(), response.status_code
+        except:
+            return {'error': response.text or 'API request failed'}, response.status_code
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'API request timed out'}), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({'error': 'Could not connect to bot API - make sure it\'s running'}), 503
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Failed to connect to bot API: {str(e)}'}), 503
 
 # Discord OAuth Configuration
 oauth = OAuth(app)
-discord = oauth.register(
-    name='discord',
-    client_id=os.environ.get('DISCORD_CLIENT_ID'),
-    client_secret=os.environ.get('DISCORD_CLIENT_SECRET'),
-    access_token_url='https://discord.com/api/oauth2/token',
-    access_token_params=None,
-    authorize_url='https://discord.com/api/oauth2/authorize',
-    authorize_params=None,
-    api_base_url='https://discord.com/api/',
-    client_kwargs={'scope': 'identify guilds'},
-    fetch_token=lambda: {'access_token': session.get('token'), 'token_type': session.get('token_type', 'Bearer')}
-)
+
+# Check if credentials are available
+discord_client_id = os.environ.get('DISCORD_CLIENT_ID')
+discord_client_secret = os.environ.get('DISCORD_CLIENT_SECRET')
+
+if not discord_client_id or not discord_client_secret:
+    print("WARNING: Discord OAuth credentials not configured. Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET in .env file")
+    print("Website will run in limited mode without OAuth login")
+
+if discord_client_id and discord_client_secret:
+    discord = oauth.register(
+        name='discord',
+        client_id=discord_client_id,
+        client_secret=discord_client_secret,
+        access_token_url='https://discord.com/api/oauth2/token',
+        access_token_params=None,
+        authorize_url='https://discord.com/api/oauth2/authorize',
+        authorize_params=None,
+        api_base_url='https://discord.com/api/',
+        client_kwargs={'scope': 'identify guilds'}
+    )
+else:
+    discord = None
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    error = request.args.get('error')
+    return render_template('index.html', discord_client_id=discord_client_id, error=error)
 
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('index') + '?error=not_logged_in')
+    
+    if not discord:
+        return render_template('error.html', 
+                              error='Discord OAuth not configured',
+                              message='Please set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET in .env file')
     
     # Fetch guilds on demand and filter by administrator permissions
     all_guilds = []
@@ -83,17 +110,19 @@ def dashboard():
 
 @app.route('/login')
 def login():
+    if not discord:
+        return redirect(url_for('index') + '?error=oauth_not_configured')
+    
     redirect_uri = url_for('callback', _external=True)
     print(f"Login redirect URI: {redirect_uri}")
     print(f"Client ID: {os.environ.get('DISCORD_CLIENT_ID')}")
-    # Add state parameter to track popup login
-    state = secrets.token_urlsafe(16)
-    session['oauth_state'] = state
-    session['popup_login'] = True  # Mark this as a popup login
-    return discord.authorize_redirect(redirect_uri, state=state)
+    return discord.authorize_redirect(redirect_uri)
 
 @app.route('/callback')
 def callback():
+    if not discord:
+        return redirect(url_for('index') + '?error=oauth_not_configured')
+    
     try:
         print("=" * 50)
         print("CALLBACK ROUTE HIT!")
@@ -139,33 +168,8 @@ def callback():
         session['user'] = user
         print("User saved to session")
         
-        # DON'T store guilds in session to avoid size issues
-        # We'll fetch them on demand instead
-        print("Skipping guild storage to avoid session size issues")
-        
-        print("Login successful!")
-        
-        # Check if this is a popup login (from session flag)
-        is_popup_login = session.pop('popup_login', False)
-        print(f"Popup login: {is_popup_login}")
-        
-        if is_popup_login:
-            # Return HTML to close the popup and notify parent window
-            return '''
-            <html>
-            <head><title>Login Successful</title></head>
-            <body>
-            <script>
-                window.opener.postMessage({login_success: true}, '*');
-                window.close();
-            </script>
-            <p>Login successful! You can close this window.</p>
-            </body>
-            </html>
-            '''
-        else:
-            print("Redirecting to dashboard...")
-            return redirect(url_for('dashboard'))
+        print("Login successful! Redirecting to dashboard...")
+        return redirect(url_for('dashboard'))
         
     except Exception as e:
         print("=" * 50)
@@ -175,16 +179,6 @@ def callback():
         import traceback
         traceback.print_exc()
         return redirect(url_for('index') + f'?error={type(e).__name__}')
-
-@app.route('/test-callback')
-def test_callback():
-    """Test route to see if callback URL is reachable"""
-    return "Callback route is working! This means the routing is fine."
-
-@app.route('/api/check-auth')
-def check_auth():
-    """Check if user is logged in (for popup OAuth flow)"""
-    return jsonify({'logged_in': 'user' in session})
 
 @app.route('/logout')
 def logout():

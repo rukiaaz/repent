@@ -93,11 +93,19 @@ class BalanceDashboard {
             if (selectId.includes('channel')) {
                 const response = await fetch(`/api/guild/${guildId}/channels`);
                 const data = await response.json();
-                this.populateSelect(selectId, data.channels);
+                if (data.channels && response.ok) {
+                    this.populateSelect(selectId, data.channels);
+                } else {
+                    this.showNotification('warning', 'Could not load channels - bot API may not be available');
+                }
             } else if (selectId.includes('role')) {
                 const response = await fetch(`/api/guild/${guildId}/roles`);
                 const data = await response.json();
-                this.populateSelect(selectId, data.roles);
+                if (data.roles && response.ok) {
+                    this.populateSelect(selectId, data.roles);
+                } else {
+                    this.showNotification('warning', 'Could not load roles - bot API may not be available');
+                }
             } else if (selectId.includes('whitelist')) {
                 const response = await fetch(`/api/whitelist/list/${guildId}`);
                 const data = await response.json();
@@ -105,6 +113,7 @@ class BalanceDashboard {
             }
         } catch (error) {
             console.error('Error loading guild data:', error);
+            this.showNotification('warning', 'Could not load guild data - bot API may not be available');
         }
     }
 
@@ -201,13 +210,14 @@ class BalanceDashboard {
                     
                     const data = await response.json();
                     
-                    if (data.success) {
-                        this.showNotification('success', data.message);
+                    if (data.success || response.ok) {
+                        this.showNotification('success', data.message || `${action} successful`);
                         this.logActivity(action, target, server);
                     } else {
                         this.showNotification('error', data.error || 'Action failed');
                     }
                 } catch (error) {
+                    console.error('Action error:', error);
                     this.showNotification('error', 'Action failed: ' + error.message);
                 }
                 closeModal();
@@ -246,13 +256,14 @@ class BalanceDashboard {
             
             const data = await response.json();
             
-            if (data.success) {
-                this.showNotification('success', data.message);
+            if (data.success || response.ok) {
+                this.showNotification('success', data.message || `${action} successful`);
                 this.logActivity(action, channel, server);
             } else {
                 this.showNotification('error', data.error || 'Action failed');
             }
         } catch (error) {
+            console.error('Channel action error:', error);
             this.showNotification('error', 'Channel action failed: ' + error.message);
         }
     }
@@ -285,8 +296,8 @@ class BalanceDashboard {
             
             const data = await response.json();
             
-            if (data.success) {
-                this.showNotification('success', data.message);
+            if (data.success || response.ok) {
+                this.showNotification('success', data.message || 'Slowmode updated');
                 this.logActivity('slowmode', `${channel}: ${duration}s`, server);
             } else {
                 this.showNotification('error', data.error || 'Failed to set slowmode');
@@ -294,6 +305,7 @@ class BalanceDashboard {
 
             document.getElementById('slowmode-settings').style.display = 'none';
         } catch (error) {
+            console.error('Slowmode error:', error);
             this.showNotification('error', 'Failed to set slowmode: ' + error.message);
         }
     }
@@ -420,11 +432,15 @@ class BalanceDashboard {
     showNotification(type, message) {
         // Create notification element
         const notification = document.createElement('div');
+        const bgColor = type === 'success' ? 'var(--brand-success)' : 
+                       type === 'error' ? 'var(--brand-danger)' : 
+                       type === 'warning' ? 'var(--brand-warning)' : 'var(--brand-info)';
+        
         notification.style.cssText = `
             position: fixed;
             bottom: 24px;
             right: 24px;
-            background: ${type === 'success' ? 'var(--brand-success)' : type === 'error' ? 'var(--brand-danger)' : 'var(--brand-info)'};
+            background: ${bgColor};
             color: white;
             padding: 16px 24px;
             border-radius: 12px;
@@ -501,4 +517,27 @@ document.head.appendChild(style);
 document.addEventListener('DOMContentLoaded', () => {
     window.dashboard = new BalanceDashboard();
     window.dashboard.animateStats();
+    
+    // Expose helper function globally
+    window.showSection = (sectionId) => {
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+        const contentSections = document.querySelectorAll('.content-section');
+        
+        sidebarLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('data-section') === sectionId) {
+                link.classList.add('active');
+            }
+        });
+        
+        contentSections.forEach(section => {
+            section.classList.remove('active');
+            if (section.id === `${sectionId}-section`) {
+                section.classList.add('active');
+            }
+        });
+    };
+    
+    // Expose channel action handler globally
+    window.channelAction = (action) => window.dashboard.executeChannelAction(action);
 });

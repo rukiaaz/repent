@@ -11,6 +11,18 @@
 </head>
 <body>
 
+{% if error %}
+<div style="position: fixed; top: 0; left: 0; right: 0; background: var(--brand-danger); color: white; padding: 12px; text-align: center; z-index: 10000;">
+  {% if error == 'oauth_not_configured' %}
+  Discord OAuth is not configured. Please set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET in .env file
+  {% elif error == 'not_logged_in' %}
+  You need to login to access the dashboard
+  {% else %}
+  {{ error }}
+  {% endif %}
+</div>
+{% endif %}
+
 <div id="splash">
   <div style="text-align:center">
     <div class="sp-name"><span>Balance</span></div>
@@ -42,8 +54,10 @@
       <div style="display:flex;align-items:center;gap:20px">
       {% if session.get('user') %}
       <a href="/dashboard" class="dashboard-btn">Dashboard</a>
+      {% elif not discord_client_id %}
+      <a href="#" class="dashboard-btn" style="opacity: 0.5; cursor: not-allowed;">Login (OAuth Not Configured)</a>
       {% else %}
-      <a href="/login" class="dashboard-btn" target="_blank" rel="noopener">Login</a>
+      <a href="/login" class="dashboard-btn">Login</a>
       {% endif %}
       <button class="hbg" id="hbg" aria-label="Menu"><span></span><span></span><span></span></button>
     </div>
@@ -209,46 +223,5 @@
 </div>
 
 <script src="script.js"></script>
-<script>
-// Listen for login success message from popup
-window.addEventListener('message', (event) => {
-  if (event.data && event.data.login_success) {
-    // Login was successful, redirect to dashboard
-    window.location.href = '/dashboard';
-  }
-});
-
-// Check for login completion from Discord popup (fallback)
-function checkLoginStatus() {
-  // Poll to check if user is logged in (from the popup completing OAuth)
-  const checkInterval = setInterval(() => {
-    fetch('/api/check-auth')
-      .then(response => response.json())
-      .then(data => {
-        if (data.logged_in) {
-          clearInterval(checkInterval);
-          // Redirect to dashboard
-          window.location.href = '/dashboard';
-        }
-      })
-      .catch(() => {
-        // Ignore errors, keep checking
-      });
-  }, 1000); // Check every second
-
-  // Stop checking after 2 minutes
-  setTimeout(() => {
-    clearInterval(checkInterval);
-  }, 120000);
-}
-
-// Start checking when page loads
-document.addEventListener('DOMContentLoaded', () => {
-  // Only check if we're not already on dashboard
-  if (!window.location.pathname.includes('/dashboard')) {
-    checkLoginStatus();
-  }
-});
-</script>
 </body>
 </html>

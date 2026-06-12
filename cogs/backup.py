@@ -337,7 +337,7 @@ class Backup(commands.Cog):
             self.bot = bot
             self.cog = cog
 
-        @app_commands.command(name="create", description="Create a manual backup snapshot of server roles and channels (Admin only)")
+        @app_commands.command(name="create", description="Create backup of server roles and channels")
         @app_commands.describe(name="Description name for this backup")
         async def create(self, interaction: discord.Interaction, name: str):
             if not await self.cog._is_admin(interaction):
@@ -366,7 +366,7 @@ class Backup(commands.Cog):
             except Exception as e:
                 await interaction.followup.send(embed=error_embed(f"Failed to create backup: {e}"), ephemeral=True)
 
-        @app_commands.command(name="list", description="List all created backups for this server (Admin only)")
+        @app_commands.command(name="list", description="List all server backups")
         async def list_backups(self, interaction: discord.Interaction):
             if not await self.cog._is_admin(interaction):
                 return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
@@ -387,7 +387,7 @@ class Backup(commands.Cog):
             embed = info_embed("Server Backups List", "\n".join(lines))
             await interaction.followup.send(embed=embed, ephemeral=True)
 
-        @app_commands.command(name="delete", description="Delete a server backup snapshot (Admin only)")
+        @app_commands.command(name="delete", description="Delete a server backup")
         @app_commands.describe(backup_id="The ID of the backup snapshot to delete")
         async def delete(self, interaction: discord.Interaction, backup_id: str):
             if not await self.cog._is_admin(interaction):
@@ -406,7 +406,7 @@ class Backup(commands.Cog):
 
         @app_commands.command(
             name="restore",
-            description="Restore channels and roles from backup (Admin only)",
+            description="Restore channels and roles from backup",
         )
         @app_commands.describe(backup_id="Backup ID (e.g. bk_...) OR exact backup name to restore")
         async def restore(self, interaction: discord.Interaction, backup_id: str):

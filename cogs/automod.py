@@ -364,6 +364,64 @@ class AutoMod(commands.Cog):
                     await self._punish_user(message, "bad_word", f"Using forbidden word: {word}")
                     return
 
+        # ── Token Protection ──
+        settings = await get_guild(guild.id)
+        if settings.get("anti_token_enabled", 0):
+            # Discord token regex pattern
+            token_pattern = r"[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}"
+            tokens = re.findall(token_pattern, content)
+            if tokens:
+                try:
+                    await message.delete()
+                except Exception:
+                    pass
+                await self._punish_user(message, "token_leak", f"Posting Discord tokens ({len(tokens)} found)")
+                # Log the incident for security monitoring
+                self.logger.security("TOKEN_LEAK", f"Detected {len(tokens)} token(s) in message", 
+                                   guild_id=guild.id, user_id=author.id, 
+                                   extra={"tokens_found": len(tokens), "channel_id": message.channel.id})
+                return
+
+        # ── Phishing Detection ──
+        # Known suspicious domains and patterns
+        suspicious_domains = [
+            'discord-login.com', 'discord-gift.com', 'discord-nitro.com',
+            'free-discord-nitro.com', 'discord-steal.com', 'discord-token.com',
+            'discord-verify.com', 'discord-confirm.com', 'discord-support.com'
+        ]
+        suspicious_patterns = [
+            r'login.*discord', r'verify.*discord', r'confirm.*discord',
+            r'gift.*nitro', r'free.*nitro', r'steal.*token'
+        ]
+        
+        # Check for suspicious domains
+        for domain in suspicious_domains:
+            if domain in content.lower():
+                try:
+                    await message.delete()
+                except Exception:
+                    pass
+                await self._punish_user(message, "phishing", f"Posting phishing link ({domain})")
+                self.logger.security("PHISHING_ATTEMPT", f"Detected suspicious domain: {domain}",
+                                   guild_id=guild.id, user_id=author.id,
+                                   extra={"domain": domain, "channel_id": message.channel.id})
+                return
+        
+        # Check for suspicious patterns
+        for pattern in suspicious_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                # If it contains a URL, it might be phishing
+                if URL_REGEX.search(content):
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
+                    await self._punish_user(message, "phishing", f"Suspicious pattern detected: {pattern}")
+                    self.logger.security("PHISHING_ATTEMPT", f"Detected suspicious pattern: {pattern}",
+                                       guild_id=guild.id, user_id=author.id,
+                                       extra={"pattern": pattern, "channel_id": message.channel.id})
+                    return
+
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         await self.on_message(after)

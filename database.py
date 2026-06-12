@@ -6,6 +6,7 @@ SQLite via aiosqlite. All operations are async.
 import os
 import json
 import asyncio
+import time
 import aiosqlite
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any, Tuple, Set
@@ -183,7 +184,6 @@ async def init_db():
         except aiosqlite.OperationalError as e:
             if "locked" in str(e).lower():
                 if attempt < max_retries - 1:
-                    import time
                     wait_time = (attempt + 1) * 2  # Exponential backoff: 2s, 4s, 6s, 8s
                     print(f"[WARN] Database locked, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
                     time.sleep(wait_time)

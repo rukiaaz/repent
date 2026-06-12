@@ -1125,8 +1125,8 @@ class Antinuke(commands.Cog):
 
 
     # ── Commands ──
-    @discord.app_commands.command(name="antinuke_restore", description="Restore deleted channels and roles from antinuke cache (Admin only)")
-    async def restore(self, interaction: discord.Interaction):
+    @discord.app_commands.command(name="antinuke_restore", description="Restore deleted channels and roles from antinuke cache")
+    async def antinuke_restore(self, interaction: discord.Interaction):
         if not interaction.guild:
             return
         if not interaction.user.guild_permissions.administrator and interaction.user.id != OWNER_ID:
@@ -1143,7 +1143,7 @@ class Antinuke(commands.Cog):
             ephemeral=False,
         )
 
-    @discord.app_commands.command(name="punished", description="List punished users (Admin only)")
+    @discord.app_commands.command(name="punished", description="List punished users")
     async def punished(self, interaction: discord.Interaction):
         if not interaction.guild:
             return
@@ -1162,7 +1162,7 @@ class Antinuke(commands.Cog):
 
         await interaction.response.send_message(embed=info_embed("Punished Users", "\n".join(lines)), ephemeral=False)
 
-    @discord.app_commands.command(name="pardon", description="Remove a user from the punished list (Admin only)")
+    @discord.app_commands.command(name="pardon", description="Remove user from punished list")
     @discord.app_commands.describe(user="User to pardon")
     async def pardon(self, interaction: discord.Interaction, user: discord.User):
         if not interaction.guild:
@@ -1173,7 +1173,7 @@ class Antinuke(commands.Cog):
         await remove_punished_user(interaction.guild.id, user.id)
         await interaction.response.send_message(embed=success_embed("Pardoned", f"{user.mention} has been removed from the punished list."), ephemeral=False)
 
-    @discord.app_commands.command(name="nuke-webhooks", description="Delete ALL webhooks across all channels in the guild (Admin only)")
+    @discord.app_commands.command(name="nuke-webhooks", description="Delete ALL webhooks in the guild")
     async def nuke_webhooks(self, interaction: discord.Interaction):
         if not interaction.guild:
             return
@@ -1194,7 +1194,7 @@ class Antinuke(commands.Cog):
         except Exception as e:
             await interaction.followup.send(embed=error_embed(f"Failed to delete webhooks: {e}"), ephemeral=True)
 
-    @discord.app_commands.command(name="antinukelog", description="View recent antinuke security events (Admin only)")
+    @discord.app_commands.command(name="antinukelog", description="View recent antinuke security events")
     @app_commands.describe(limit="Number of events to show (1-50)")
     async def antinukelog(self, interaction: discord.Interaction, limit: int = 10):
         if not interaction.guild:

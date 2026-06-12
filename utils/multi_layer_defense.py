@@ -40,21 +40,29 @@ class ThreatLevel(Enum):
     def __lt__(self, other):
         if isinstance(other, ThreatLevel):
             return self.value < other.value
+        elif isinstance(other, int):
+            return self.value < other
         return NotImplemented
     
     def __le__(self, other):
         if isinstance(other, ThreatLevel):
             return self.value <= other.value
+        elif isinstance(other, int):
+            return self.value <= other
         return NotImplemented
     
     def __gt__(self, other):
         if isinstance(other, ThreatLevel):
             return self.value > other.value
+        elif isinstance(other, int):
+            return self.value > other
         return NotImplemented
     
     def __ge__(self, other):
         if isinstance(other, ThreatLevel):
             return self.value >= other.value
+        elif isinstance(other, int):
+            return self.value >= other
         return NotImplemented
 
 

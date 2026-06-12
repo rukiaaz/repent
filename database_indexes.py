@@ -27,15 +27,14 @@ async def add_indexes():
         await db.execute("CREATE INDEX IF NOT EXISTS idx_warnings_guild ON warnings(guild_id)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings(user_id)")
         
-        # Logs indexes
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_logs_guild ON logs(guild_id)")
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_logs_action ON logs(action)")
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)")
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_logs_guild_action ON logs(guild_id, action)")
+        # Logs indexes (action_log table)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_action_log_guild ON action_log(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_action_log_action ON action_log(action_type)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_action_log_timestamp ON action_log(timestamp)")
         
-        # Whitelists indexes
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_whitelists_guild ON whitelists(guild_id)")
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_whitelists_type ON whitelists(type)")
+        # Whitelist indexes
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_whitelist_guild ON whitelist(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_whitelist_user ON whitelist(user_id)")
         
         # Hardbans indexes
         await db.execute("CREATE INDEX IF NOT EXISTS idx_hardbans_guild ON hardbans(guild_id)")
@@ -56,6 +55,22 @@ async def add_indexes():
         # Reaction roles indexes
         await db.execute("CREATE INDEX IF NOT EXISTS idx_reaction_roles_guild ON reaction_roles(guild_id)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_reaction_roles_channel ON reaction_roles(channel_id)")
+        
+        # Additional performance indexes for frequently queried tables
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_action_log_guild_user ON action_log(guild_id, user_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_automod_strikes_guild_user ON automod_strikes(guild_id, user_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_punished_users_guild ON punished_users(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_ignored_channels_guild_module ON ignored_channels(guild_id, module)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_bad_words_guild ON bad_words(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_antinuke_thresholds_guild ON antinuke_thresholds(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_cached_roles_guild ON cached_roles(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_cached_channels_guild ON cached_channels(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_xp_guild_user ON xp(guild_id, user_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_rate_tracker_guild_user ON rate_tracker(guild_id, user_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_bot_whitelist_guild ON bot_whitelist(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_role_whitelist_guild_role ON role_whitelist(guild_id, role_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_backups_guild ON backups(guild_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_whitelist_guild_user ON whitelist(guild_id, user_id)")
         
         await db.commit()
         print("Database indexes added successfully!")

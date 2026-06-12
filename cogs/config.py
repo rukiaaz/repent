@@ -884,9 +884,9 @@ class Config(commands.Cog):
         )
 
     # ── Enhanced Antinuke Commands ──
-    @app_commands.command(name="antinukeconfig", description="Configure advanced antinuke settings (Admin only)")
+    @app_commands.command(name="antinukeconfig", description="Configure advanced antinuke settings")
     @app_commands.describe(
-        action="sensitivity, lockdown, instantrestore, logging, or status",
+        action="sensitivity, lockdown, instantrestore, logging, tokenprotect, or status",
         value="Value to set"
     )
     async def antinukeconfig(self, interaction: discord.Interaction, action: str, value: str = None):
@@ -974,12 +974,33 @@ class Config(commands.Cog):
                     ephemeral=False
                 )
 
+        elif action_l == "tokenprotect":
+            if not value:
+                current = settings.get("anti_token_enabled", 0)
+                return await interaction.response.send_message(
+                    embed=info_embed("Token Protection", f"Current: {'✅ Enabled' if current else '❌ Disabled'}"),
+                    ephemeral=False
+                )
+            if value.lower() in ("true", "on", "enable", "1"):
+                await update_guild(guild.id, anti_token_enabled=1)
+                return await interaction.response.send_message(
+                    embed=success_embed("Token Protection Enabled", "Discord token leak detection is now active."),
+                    ephemeral=False
+                )
+            else:
+                await update_guild(guild.id, anti_token_enabled=0)
+                return await interaction.response.send_message(
+                    embed=success_embed("Token Protection Disabled", "Discord token leak detection is now disabled."),
+                    ephemeral=False
+                )
+
         elif action_l == "status":
             embed = discord.Embed(title="🛡️ Advanced Antinuke Status", color=0x4488FF)
             embed.add_field(name="Sensitivity", value=f"{settings.get('antinuke_sensitivity_level', 5)}/10", inline=True)
             embed.add_field(name="Lockdown Mode", value="🔒 LOCKDOWN" if settings.get("antinuke_lockdown_mode", 0) else "✅ Normal", inline=True)
             embed.add_field(name="Instant Restore", value="✅ Enabled" if settings.get("antinuke_instant_restore", 1) else "❌ Disabled", inline=True)
             embed.add_field(name="Detailed Logging", value="✅ Enabled" if settings.get("antinuke_log_all_punishments", 1) else "❌ Disabled", inline=True)
+            embed.add_field(name="Token Protection", value="✅ Enabled" if settings.get("anti_token_enabled", 0) else "❌ Disabled", inline=True)
             
             try:
                 import json
@@ -993,7 +1014,7 @@ class Config(commands.Cog):
 
         else:
             return await interaction.response.send_message(
-                embed=error_embed("Use: `sensitivity`, `lockdown`, `instantrestore`, `logging`, or `status`."),
+                embed=error_embed("Use: `sensitivity`, `lockdown`, `instantrestore`, `logging`, `tokenprotect`, or `status`."),
                 ephemeral=True
             )
 

@@ -104,49 +104,8 @@ class InteractiveSetupView(discord.ui.View):
         await interaction.response.send_message(f"Welcome channel set to {channel.mention}", ephemeral=True)
         await self.update_embed(interaction)
 
-    # 4. Boost Channel Selector
-    @discord.ui.select(
-        cls=discord.ui.ChannelSelect,
-        channel_types=[discord.ChannelType.text],
-        placeholder="Boost notification channel (optional)",
-        row=2
-    )
-    async def select_boost_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
-        channel = select.values[0]
-        self.boost_channel = channel
-        await update_guild(interaction.guild.id, boost_channel=channel.id)
-        await interaction.response.send_message(f"Boost channel set to {channel.mention}", ephemeral=True)
-        await self.update_embed(interaction)
-
-    # 5. Verification Channel Selector
-    @discord.ui.select(
-        cls=discord.ui.ChannelSelect,
-        channel_types=[discord.ChannelType.text],
-        placeholder="Where should verification go? (optional)",
-        row=3
-    )
-    async def select_verification_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
-        channel = select.values[0]
-        self.verification_channel = channel
-        await update_guild(interaction.guild.id, verification_channel=channel.id)
-        await interaction.response.send_message(f"Verification channel set to {channel.mention}", ephemeral=True)
-        await self.update_embed(interaction)
-
-    # 6. Verification Role Selector
-    @discord.ui.select(
-        cls=discord.ui.RoleSelect,
-        placeholder="Role given after verification (optional)",
-        row=3
-    )
-    async def select_verification_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
-        role = select.values[0]
-        self.verification_role = role
-        await update_guild(interaction.guild.id, verification_role=role.id)
-        await interaction.response.send_message(f"Verification role set to {role.mention}", ephemeral=True)
-        await self.update_embed(interaction)
-
-    # 7. Whitelist Owner & Invoker Button
-    @discord.ui.button(label="Whitelist Owner", style=discord.ButtonStyle.primary, row=4)
+    # 4. Whitelist Owner & Invoker Button
+    @discord.ui.button(label="Whitelist Owner", style=discord.ButtonStyle.primary, row=3)
     async def whitelist_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         await add_whitelist(guild.id, guild.owner_id, 2, interaction.user.id)
@@ -157,8 +116,8 @@ class InteractiveSetupView(discord.ui.View):
         await interaction.response.send_message("Whitelisted Server Owner & Invoker with Full trust.", ephemeral=True)
         await self.update_embed(interaction)
 
-    # 8. Auto-Whitelist Bots Button
-    @discord.ui.button(label="Whitelist Bots", style=discord.ButtonStyle.secondary, row=4)
+    # 5. Auto-Whitelist Bots Button
+    @discord.ui.button(label="Whitelist Bots", style=discord.ButtonStyle.secondary, row=3)
     async def bot_whitelist_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         whitelisted_count = 0
@@ -175,7 +134,7 @@ class InteractiveSetupView(discord.ui.View):
         await interaction.response.send_message(f"Whitelisted {whitelisted_count} bots in the server.", ephemeral=True)
         await self.update_embed(interaction)
 
-    # 9. Enable All Protections Button
+    # 6. Enable All Protections Button
     @discord.ui.button(label="Enable Protections", style=discord.ButtonStyle.success, row=4)
     async def protections_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
@@ -185,7 +144,7 @@ class InteractiveSetupView(discord.ui.View):
         await interaction.response.send_message("Activated Antinuke, AutoMod, and Anti-Raid protections.", ephemeral=True)
         await self.update_embed(interaction)
 
-    # 10. Auto-Create Channel Button
+    # 7. Auto-Create Channel Button
     @discord.ui.button(label="Create Logs", style=discord.ButtonStyle.secondary, row=4)
     async def create_channel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
@@ -209,7 +168,7 @@ class InteractiveSetupView(discord.ui.View):
         await interaction.response.send_message(f"Created and set log channel to {ch.mention}", ephemeral=True)
         await self.update_embed(interaction)
 
-    # 11. Done Button
+    # 8. Done Button
     @discord.ui.button(label="Finish", style=discord.ButtonStyle.danger, row=4)
     async def done_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         bot_member = interaction.guild.me

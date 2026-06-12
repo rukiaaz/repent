@@ -14,7 +14,7 @@ from config import OWNER_ID
 from database import (
     create_case, get_case, get_user_cases, get_all_cases, resolve_case,
     update_case_evidence, create_modmail_thread, get_modmail_thread,
-    get_open_modmail_threads, close_modmail_thread, update_modmail_activity
+    get_open_modmail_threads, close_modmail_thread, update_modmail_activity, log_action
 )
 from utils.embeds import success_embed, error_embed, info_embed, warning_embed
 from utils.logger import get_logger

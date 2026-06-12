@@ -20,6 +20,7 @@ from config import BOT_NAME, VERSION, OWNER_ID, COLOR_INFO, COLOR_SUCCESS
 from database import get_afk, remove_afk, set_afk
 from utils.embeds import error_embed, info_embed, success_embed
 from utils.health_check import get_health_checker
+from utils.announcements import get_recent_announcements
 
 
 class Utility(commands.Cog):
@@ -619,6 +620,64 @@ class Utility(commands.Cog):
         except Exception as e:
             await interaction.followup.send(
                 embed=error_embed(f"Failed to get health report: {str(e)}"),
+                ephemeral=True
+            )
+
+    @app_commands.command(name="announcements", description="View recent bot updates and announcements")
+    async def announcements(self, interaction: discord.Interaction):
+        """Show recent bot announcements and updates."""
+        await interaction.response.defer(thinking=True)
+        
+        try:
+            announcements = get_recent_announcements(limit=5)
+            
+            if not announcements:
+                await interaction.followup.send(
+                    embed=info_embed("No Announcements", "There are no recent announcements at this time."),
+                    ephemeral=False
+                )
+                return
+            
+            embed = discord.Embed(
+                title="📢 Recent Bot Announcements",
+                description="Latest updates and changes to the bot",
+                color=COLOR_INFO
+            )
+            
+            for i, ann in enumerate(announcements, 1):
+                # Choose color based on importance
+                color_map = {
+                    "low": "⚪",
+                    "normal": "🔵",
+                    "high": "🟠",
+                    "critical": "🔴"
+                }
+                importance_emoji = color_map.get(ann.get("importance", "normal"), "🔵")
+                
+                # Format date if available
+                date_str = ""
+                if ann.get("date"):
+                    try:
+                        date_obj = datetime.fromisoformat(ann['date'])
+                        date_str = f" • {date_obj.strftime('%Y-%m-%d')}"
+                    except:
+                        pass
+                
+                # Add announcement as field
+                field_name = f"{importance_emoji} {ann['title']}{date_str}"
+                embed.add_field(
+                    name=field_name,
+                    value=ann['description'][:200] + "..." if len(ann['description']) > 200 else ann['description'],
+                    inline=False
+                )
+            
+            embed.set_footer(text=f"Showing {len(announcements)} most recent announcements | Use /setup to configure the bot")
+            
+            await interaction.followup.send(embed=embed, ephemeral=False)
+            
+        except Exception as e:
+            await interaction.followup.send(
+                embed=error_embed(f"Failed to fetch announcements: {str(e)}"),
                 ephemeral=True
             )
 

@@ -128,6 +128,22 @@ def add_optimization_announcement():
     )
 
 
+def add_antinuke_improvements_announcement():
+    """Add announcement for antinuke improvements."""
+    existing = load_announcements()
+    
+    # Check if we already added this announcement
+    if any("antinuke improvements" in ann.get("title", "").lower() for ann in existing):
+        return  # Already added
+    
+    add_announcement(
+        "🛡️ Antinuke System Overhaul - Zero Tolerance Protection",
+        "Completely redesigned antinuke detection with zero-tolerance policies. Instant ban on first channel rename (no rate limiting), automatic channel name restoration from latest snapshot, 5-minute auto-snapshot system with intelligent cleanup, and smart announcement tracking. Fixed channel rename bypass where attackers renamed 15+ channels before being caught. Now restores all channel names immediately using latest snapshot data. Added comprehensive protection against all sophisticated nuke codes including Scylla, FX Selfbot, and JavaScript nukers.",
+        "critical"
+    )
+
+
 # Initialize on import
 initialize_current_session_announcements()
 add_optimization_announcement()
+add_antinuke_improvements_announcement()

@@ -18,6 +18,38 @@ async def snapshot_guild(guild: discord.Guild):
             await cache_channel(guild.id, channel)
         except Exception:
             pass
+    
+    # Also create a full timestamped snapshot for restoration
+    try:
+        from database import create_snapshot
+        snapshot_data = {
+            'guild_name': guild.name,
+            'guild_icon': guild.icon,
+            'channels': [],
+            'roles': []
+        }
+        
+        for channel in guild.channels:
+            snapshot_data['channels'].append({
+                'id': channel.id,
+                'name': channel.name,
+                'type': channel.type.value,
+                'category_id': channel.category_id,
+                'position': channel.position
+            })
+        
+        for role in guild.roles:
+            snapshot_data['roles'].append({
+                'id': role.id,
+                'name': role.name,
+                'color': role.color.value,
+                'position': role.position,
+                'permissions': role.permissions.value
+            })
+        
+        await create_snapshot(guild.id, snapshot_data)
+    except Exception:
+        pass
 
 
 async def snapshot_role(role: discord.Role):

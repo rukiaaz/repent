@@ -84,7 +84,7 @@ class Repent(commands.Bot):
             self.logger.error(f"Failed to sync commands", exc_info=True)
 
         # Start background tasks
-        self.cache_snapshot_loop.start()
+        asyncio.create_task(self.cache_snapshot_loop())
         
         # Setup signal handlers for graceful shutdown
         self._setup_signal_handlers()
@@ -191,15 +191,25 @@ class Repent(commands.Bot):
         
         return announcement_channel
 
-    async def _send_announcements(self, channel: discord.TextChannel):
-        """Send recent announcements to a channel."""
+    async def _send_announcements(self, channel: discord.TextChannel, guild_id: int):
+        """Send only unsent announcements to a channel."""
         try:
-            announcements = get_recent_announcements(limit=3)
+            from database import get_unsent_announcements, mark_announcement_sent
+            all_announcements = get_recent_announcements(limit=10)
             
-            if not announcements:
+            if not all_announcements:
                 return
             
-            for ann in announcements:
+            # Get only unsent announcements for this guild
+            unsent_announcements = await get_unsent_announcements(guild_id, all_announcements)
+            
+            if not unsent_announcements:
+                self.logger.info(f"No new announcements to send to guild {guild_id}")
+                return
+            
+            self.logger.info(f"Sending {len(unsent_announcements)} new announcements to guild {guild_id}")
+            
+            for ann in unsent_announcements:
                 # Choose color based on importance
                 color_map = {
                     "low": 0x888888,
@@ -231,6 +241,9 @@ class Repent(commands.Bot):
                 
                 await channel.send(embed=embed)
                 
+                # Mark this announcement as sent to this guild
+                await mark_announcement_sent(guild_id, ann['id'])
+                
         except Exception as e:
             self.logger.error(f"Error sending announcements to channel {channel.id}: {e}", exc_info=True)
 
@@ -240,7 +253,7 @@ class Repent(commands.Bot):
             try:
                 announcement_channel = await self._get_or_create_announcement_channel(guild)
                 if announcement_channel:
-                    await self._send_announcements(announcement_channel)
+                    await self._send_announcements(announcement_channel, guild.id)
                     self.logger.info(f"Sent announcements to guild {guild.name} ({guild.id})")
             except Exception as e:
                 self.logger.error(f"Failed to send announcements to guild {guild.id}: {e}", exc_info=True)
@@ -342,23 +355,34 @@ class Repent(commands.Bot):
                 self.logger.error(f"Failed to reban hardbanned user {member.id}", exc_info=True)
 
     # ── Cache snapshot loop ──
-    @tasks.loop(seconds=CACHE_AUTO_SAVE_INTERVAL)
     async def cache_snapshot_loop(self):
-        for guild in self.guilds:
-            try:
-                await snapshot_guild(guild)
-            except Exception as e:
-                self.logger.error(f"Failed to snapshot guild {guild.id} in loop", exc_info=True)
-        
-        # Update presence after snapshot to keep member counts current
-        try:
-            await self.update_presence()
-        except Exception as e:
-            self.logger.error(f"Failed to update presence in snapshot loop", exc_info=True)
-
-    @cache_snapshot_loop.before_loop
-    async def before_cache_loop(self):
+        """Background task to create auto-snapshots every 5 minutes with cleanup."""
         await self.wait_until_ready()
+        
+        while not self.is_closed():
+            for guild in self.guilds:
+                try:
+                    # Create snapshot using the enhanced function
+                    antinuke_cog = self.get_cog('Antinuke')
+                    if antinuke_cog:
+                        success = await antinuke_cog.create_auto_snapshot(guild)
+                        if success:
+                            # Clean up old snapshots (keep only 3 most recent)
+                            await antinuke_cog.cleanup_old_snapshots(guild, keep_count=3)
+                    else:
+                        # Fallback to basic snapshot
+                        await snapshot_guild(guild)
+                except Exception as e:
+                    self.logger.error(f"Failed to snapshot guild {guild.id} in loop", exc_info=True)
+            
+            # Update presence after snapshot to keep member counts current
+            try:
+                await self.update_presence()
+            except Exception as e:
+                self.logger.error(f"Failed to update presence in snapshot loop", exc_info=True)
+            
+            # Wait 5 minutes before next snapshot
+            await asyncio.sleep(300)
 
     # ── Error Handlers ──
     async def on_command_error(self, ctx, error):
@@ -411,8 +435,8 @@ class Repent(commands.Bot):
         self.logger.info("Starting graceful shutdown")
         
         try:
-            # Cancel background tasks
-            self.cache_snapshot_loop.cancel()
+            # Cache layer will be stopped when the loop exits naturally
+            # No need to cancel the task as it checks self.is_closed()
             
             # Stop cache layer
             cache_layer = get_cache_layer()

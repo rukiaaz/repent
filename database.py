@@ -318,6 +318,25 @@ async def init_db():
             PRIMARY KEY (guild_id, channel_id)
         )""",
 
+        # Guild snapshots for auto-restore
+        """CREATE TABLE IF NOT EXISTS guild_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER NOT NULL,
+            timestamp TEXT DEFAULT '',
+            guild_name TEXT DEFAULT '',
+            guild_icon TEXT DEFAULT '',
+            data TEXT DEFAULT '{}'
+        )""",
+
+        # Track which announcements have been sent to which guilds
+        """CREATE TABLE IF NOT EXISTS sent_announcements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER NOT NULL,
+            announcement_id INTEGER NOT NULL,
+            sent_at TEXT DEFAULT '',
+            UNIQUE(guild_id, announcement_id)
+        )""",
+
         # Moderation cases
         """CREATE TABLE IF NOT EXISTS cases (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1345,6 +1364,106 @@ async def delete_cached_channel(guild_id: int, channel_id: int):
     )
     await db.commit()
     await _release_db(db)
+
+
+# Snapshot management functions
+async def create_snapshot(guild_id: int, data: Dict[str, Any]) -> int:
+    """Create a new snapshot for a guild with current state."""
+    db = await _get_db()
+    snapshot_id = await db.execute(
+        """INSERT INTO guild_snapshots 
+           (guild_id, timestamp, guild_name, guild_icon, data) 
+           VALUES (?, ?, ?, ?, ?)""",
+        (
+            guild_id,
+            _now(),
+            data.get('guild_name', ''),
+            data.get('guild_icon', ''),
+            json.dumps(data)
+        ),
+    )
+    await db.commit()
+    await _release_db(db)
+    return snapshot_id.lastrowid
+
+
+async def get_snapshots(guild_id: int) -> List[Dict[str, Any]]:
+    """Get all snapshots for a guild."""
+    db = await _get_db()
+    rows = await db.execute(
+        "SELECT * FROM guild_snapshots WHERE guild_id = ? ORDER BY timestamp DESC",
+        (guild_id,)
+    )
+    rows = await rows.fetchall()
+    await _release_db(db)
+    return [dict(r) for r in rows]
+
+
+async def get_latest_snapshot(guild_id: int) -> Optional[Dict[str, Any]]:
+    """Get the most recent snapshot for a guild."""
+    db = await _get_db()
+    rows = await db.execute(
+        "SELECT * FROM guild_snapshots WHERE guild_id = ? ORDER BY timestamp DESC LIMIT 1",
+        (guild_id,)
+    )
+    rows = await rows.fetchall()
+    await _release_db(db)
+    if rows:
+        return dict(rows[0])
+    return None
+
+
+async def delete_snapshot(snapshot_id: int) -> bool:
+    """Delete a specific snapshot by ID."""
+    db = await _get_db()
+    await db.execute(
+        "DELETE FROM guild_snapshots WHERE id = ?",
+        (snapshot_id,),
+    )
+    await db.commit()
+    await _release_db(db)
+    return True
+
+
+# Sent announcement tracking functions
+async def mark_announcement_sent(guild_id: int, announcement_id: int) -> bool:
+    """Mark an announcement as sent to a guild."""
+    db = await _get_db()
+    try:
+        await db.execute(
+            """INSERT OR REPLACE INTO sent_announcements 
+               (guild_id, announcement_id, sent_at) 
+               VALUES (?, ?, ?)""",
+            (guild_id, announcement_id, _now()),
+        )
+        await db.commit()
+        await _release_db(db)
+        return True
+    except Exception as e:
+        await _release_db(db)
+        return False
+
+
+async def is_announcement_sent(guild_id: int, announcement_id: int) -> bool:
+    """Check if an announcement has been sent to a guild."""
+    db = await _get_db()
+    rows = await db.execute(
+        "SELECT 1 FROM sent_announcements WHERE guild_id = ? AND announcement_id = ?",
+        (guild_id, announcement_id),
+    )
+    rows = await rows.fetchall()
+    await _release_db(db)
+    return len(rows) > 0
+
+
+async def get_unsent_announcements(guild_id: int, all_announcements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Get announcements that haven't been sent to a guild."""
+    unsent = []
+    for announcement in all_announcements:
+        announcement_id = announcement.get('id')
+        if announcement_id and not await is_announcement_sent(guild_id, announcement_id):
+            unsent.append(announcement)
+    return unsent
 
 
 # ── XP / Leveling ──

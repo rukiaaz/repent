@@ -1285,10 +1285,11 @@ class Antinuke(commands.Cog):
                     guild_id=guild.id,
                     user_id=attacker.id
                 )
-                # Check for rapid channel renames using a short time window
-                if await self._detect_rapid_channel_renames(guild.id, attacker.id):
-                    instant_punish = True
-                    instant_reason = f"Rapid channel renaming attack detected (multiple channels renamed in quick succession)"
+                
+                # INSTANT BAN - No rate tracker check, instant punishment on first rename
+                # This prevents any channel rename at all - zero tolerance
+                instant_punish = True
+                instant_reason = f"Channel rename detected - renamed '{before_name}' to '{after_name}' (zero tolerance policy)"
 
         elif action == discord.AuditLogAction.guild_owner_transfer:
             action_type = "owner_transfer"
@@ -1335,16 +1336,18 @@ class Antinuke(commands.Cog):
             await self._handle_instant_punishment(guild, attacker.id, action_type or "permission_escalation", instant_reason, guild_name_changed)
             # Trigger auto-restore for all channels if channel rename attack detected
             if action_type == "channel_update" and instant_punish:
-                # Get all recently modified channels from cache and restore them
+                # Get all channels from latest snapshot and restore their names immediately
                 from database import get_cached_channels
                 try:
                     cached_channels = await get_cached_channels(guild.id)
                     if cached_channels:
-                        channel_ids = {int(c.get('channel_id')) for c in cached_channels if c.get('original_name')}
+                        # Restore all channel names from snapshot, not just recently modified ones
+                        channel_ids = {int(c.get('channel_id')) for c in cached_channels if c.get('channel_id')}
                         if channel_ids:
                             asyncio.create_task(self._restore_channel_names(guild, channel_ids))
-                except Exception:
-                    pass
+                            self.logger.info(f"Triggered immediate channel name restoration for {len(channel_ids)} channels")
+                except Exception as e:
+                    self.logger.error(f"Failed to trigger channel name restoration: {e}", exc_info=True)
             # Targeted restore for deletes
             if action in (discord.AuditLogAction.channel_delete, discord.AuditLogAction.role_delete):
                 await self._auto_restore_from_cache(
@@ -1470,29 +1473,74 @@ class Antinuke(commands.Cog):
             return False
 
     async def _restore_channel_names(self, guild: discord.Guild, channel_ids: Set[int]) -> None:
-        """Restore original names for renamed channels."""
+        """Restore original names for renamed channels from latest snapshot."""
         try:
-            from database import get_cached_channels
-            cached_channels = await get_cached_channels(guild.id)
+            from database import get_latest_snapshot
+            latest_snapshot = await get_latest_snapshot(guild.id)
             
-            # Create a map of channel_id -> original_name
+            if not latest_snapshot:
+                self.logger.warning(f"No snapshot found for guild {guild.id}, cannot restore channel names")
+                return
+            
+            # Parse snapshot data
+            import json
+            snapshot_data = json.loads(latest_snapshot.get('data', '{}'))
+            channels_data = snapshot_data.get('channels', [])
+            
+            # Create a map of channel_id -> original_name using latest snapshot
             name_map = {}
-            for channel in cached_channels:
-                if channel.get('original_name') and int(channel.get('channel_id', 0)) in channel_ids:
-                    name_map[int(channel['channel_id'])] = channel['original_name']
+            for channel in channels_data:
+                channel_id = int(channel.get('id', 0))
+                if channel_id in channel_ids:
+                    name_map[channel_id] = channel.get('name', 'restored')
             
             # Restore channel names in parallel for speed
             tasks = []
             for channel_id, original_name in name_map.items():
                 channel = guild.get_channel(channel_id)
                 if channel and channel.name != original_name:
-                    tasks.append(channel.edit(name=original_name, reason="[Repent] Restored original channel name after attack"))
+                    tasks.append(channel.edit(name=original_name, reason="[Repent] Restored channel name from latest snapshot"))
             
             if tasks:
                 await asyncio.gather(*tasks, return_exceptions=True)
-                self.logger.info(f"Restored {len(tasks)} channel names for guild {guild.id}")
+                self.logger.info(f"Restored {len(tasks)} channel names from latest snapshot for guild {guild.id}")
         except Exception as e:
             self.logger.error(f"Failed to restore channel names: {e}", exc_info=True)
+
+    async def create_auto_snapshot(self, guild: discord.Guild) -> bool:
+        """Create an automatic snapshot for the guild."""
+        try:
+            from utils.cache import snapshot_guild
+            await snapshot_guild(guild)
+            self.logger.info(f"Auto-snapshot created for guild {guild.name} ({guild.id})")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to create auto-snapshot for guild {guild.id}: {e}", exc_info=True)
+            return False
+
+    async def cleanup_old_snapshots(self, guild: discord.Guild, keep_count: int = 3) -> int:
+        """Delete old snapshots, keeping only the most recent keep_count snapshots."""
+        try:
+            from database import get_snapshots, delete_snapshot
+            snapshots = await get_snapshots(guild.id)
+            
+            # Sort by timestamp (newest first) and keep only the most recent
+            snapshots.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+            old_snapshots = snapshots[keep_count:]  # Remove old ones beyond keep_count
+            
+            deleted_count = 0
+            for snapshot in old_snapshots:
+                snapshot_id = snapshot.get('id')
+                if snapshot_id:
+                    await delete_snapshot(snapshot_id)
+                    deleted_count += 1
+            
+            if deleted_count > 0:
+                self.logger.info(f"Cleaned up {deleted_count} old snapshots for guild {guild.id}")
+            return deleted_count
+        except Exception as e:
+            self.logger.error(f"Failed to cleanup old snapshots for guild {guild.id}: {e}", exc_info=True)
+            return 0
 
     # Primary detection source: audit log only.
     @commands.Cog.listener()

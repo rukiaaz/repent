@@ -113,5 +113,21 @@ def initialize_current_session_announcements():
         add_announcement(ann["title"], ann["description"], ann["importance"])
 
 
+def add_optimization_announcement():
+    """Add announcement for the optimization update."""
+    existing = load_announcements()
+    
+    # Check if we already added this announcement
+    if any("security and performance" in ann.get("title", "").lower() for ann in existing):
+        return  # Already added
+    
+    add_announcement(
+        "🚀 Major Security & Performance Update",
+        "Implemented advanced token protection with Discord token leak detection, added phishing detection system, fixed critical bugs (ThreatLevel comparisons, command conflicts), enhanced database performance with comprehensive indexes, and added missing dependencies. Created comprehensive optimization plan for future enhancements.",
+        "high"
+    )
+
+
 # Initialize on import
 initialize_current_session_announcements()
+add_optimization_announcement()

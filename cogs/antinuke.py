@@ -967,7 +967,7 @@ class Antinuke(commands.Cog):
         # This prevents distributed attacks or multiple attackers working together
         self.rate_tracker.add_event(guild.id, 0, "guild_total_actions")  # user_id 0 = server-wide
         guild_total_actions = self.rate_tracker.count_events(guild.id, 0, "guild_total_actions", 5)
-        if guild_total_actions >= 50:  # 50+ server actions in 5 seconds = emergency mode
+        if guild_total_actions >= 30:  # 30+ server actions in 5 seconds = emergency mode (reduced from 50 for faster response)
             instant_punish = True
             instant_reason = "EMERGENCY: Mass server attack detected - automatic lockdown triggered"
 
@@ -994,9 +994,26 @@ class Antinuke(commands.Cog):
             if entry.target and hasattr(entry.target, "id"):
                 extra_webhook_id = int(entry.target.id)
             target_desc = f"Webhook: {getattr(entry.target, 'name', 'Unknown')}"
+            
+            # Track webhook creation for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "webhook_create")
+            
+            # INSTANT DETECTION: 3 webhook creates in 2 seconds = instant ban
+            # This prevents the webhook flood attacks used by sophisticated nukers
+            if self.rate_tracker.count_events(guild.id, attacker.id, "webhook_create", 2) >= 3:
+                instant_punish = True
+                instant_reason = "Mass webhook creation attack detected (webhook flood)"
 
         elif action == discord.AuditLogAction.webhook_delete:
             action_type = "webhook_delete"
+            
+            # Track webhook deletion for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "webhook_delete")
+            
+            # INSTANT DETECTION: 3 webhook deletes in 2 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "webhook_delete", 2) >= 3:
+                instant_punish = True
+                instant_reason = "Mass webhook deletion attack detected"
 
         elif action == discord.AuditLogAction.role_update:
             before_perms = getattr(entry.changes.before, "permissions", None)
@@ -1023,6 +1040,11 @@ class Antinuke(commands.Cog):
 
         elif action == discord.AuditLogAction.member_role_update:
             added_roles = getattr(entry.changes.after, "roles", [])
+            
+            # Track member role updates for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "member_role_update")
+            
+            # Check for dangerous role assignments
             for r in added_roles:
                 if self._is_dangerous_role(r):
                     instant_punish = True
@@ -1030,15 +1052,46 @@ class Antinuke(commands.Cog):
                         f"Permission escalation: assigned dangerous role @{r.name}"
                     )
                     break
+            
+            # INSTANT DETECTION: 5 role updates in 2 seconds = instant ban
+            if not instant_punish and self.rate_tracker.count_events(guild.id, attacker.id, "member_role_update", 2) >= 5:
+                instant_punish = True
+                instant_reason = "Mass role assignment attack detected (assigning roles to multiple users rapidly)"
 
         elif action == discord.AuditLogAction.ban:
             action_type = "ban"
+            
+            # Track ban actions for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "ban")
+            
+            # INSTANT DETECTION: 3 bans in 2 seconds = instant ban
+            # This prevents mass ban attacks used by sophisticated nukers
+            if self.rate_tracker.count_events(guild.id, attacker.id, "ban", 2) >= 3:
+                instant_punish = True
+                instant_reason = "Mass ban attack detected (banning multiple users rapidly)"
 
         elif action == discord.AuditLogAction.unban:
             action_type = "unban"
+            
+            # Track unban actions (could be part of attack pattern)
+            self.rate_tracker.add_event(guild.id, attacker.id, "unban")
+            
+            # INSTANT DETECTION: 5 unbans in 2 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "unban", 2) >= 5:
+                instant_punish = True
+                instant_reason = "Mass unban attack detected (suspicious pattern)"
 
         elif action == discord.AuditLogAction.kick:
             action_type = "kick"
+            
+            # Track kick actions for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "kick")
+            
+            # INSTANT DETECTION: 3 kicks in 2 seconds = instant ban
+            # This prevents mass kick attacks used by sophisticated nukers
+            if self.rate_tracker.count_events(guild.id, attacker.id, "kick", 2) >= 3:
+                instant_punish = True
+                instant_reason = "Mass kick attack detected (kicking multiple users rapidly)"
 
         elif action == discord.AuditLogAction.channel_delete:
             action_type = "channel_delete"
@@ -1098,10 +1151,50 @@ class Antinuke(commands.Cog):
             # Track role creation for mass detection
             self.rate_tracker.add_event(guild.id, attacker.id, "role_create")
             
+            # Check for dangerous permissions in new roles
+            role_perms = getattr(entry.target, 'permissions', None)
+            if role_perms:
+                from config import DANGEROUS_PERMISSIONS
+                has_dangerous = any(hasattr(role_perms, perm) and getattr(role_perms, perm, False) for perm in DANGEROUS_PERMISSIONS)
+                if has_dangerous:
+                    instant_punish = True
+                    instant_reason = "Created role with dangerous permissions - permission escalation attack"
+            
             # INSTANT DETECTION: 5 role creates in 2 seconds = instant ban
             if self.rate_tracker.count_events(guild.id, attacker.id, "role_create", 2) >= 5:
                 instant_punish = True
                 instant_reason = "Mass role creation attack detected (attempting to create many roles)"
+
+        elif action == discord.AuditLogAction.role_update:
+            before_perms = getattr(entry.changes.before, "permissions", None)
+            after_perms = getattr(entry.changes.after, "permissions", None)
+            if before_perms is not None and after_perms is not None:
+                from config import DANGEROUS_PERMISSIONS
+
+                added_perms = []
+                for perm_name, value in after_perms:
+                    if value and not getattr(before_perms, perm_name, False):
+                        added_perms.append(perm_name)
+
+                dangerous_added = [p for p in added_perms if p in DANGEROUS_PERMISSIONS]
+                if dangerous_added:
+                    instant_punish = True
+                    instant_reason = (
+                        "Permission escalation: granted dangerous permissions "
+                        f"{', '.join(dangerous_added)}"
+                    )
+
+            if not instant_punish:
+                action_type = "role_update"
+                target_desc = f"@{getattr(entry.target, 'name', 'Role')}"
+            
+            # Track role updates for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "role_update")
+            
+            # INSTANT DETECTION: 5 role updates in 2 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "role_update", 2) >= 5:
+                instant_punish = True
+                instant_reason = "Mass role modification attack detected"
 
         elif action == discord.AuditLogAction.guild_update:
             before_vanity = getattr(entry.changes.before, "vanity_url_code", None)
@@ -1147,12 +1240,36 @@ class Antinuke(commands.Cog):
                     instant_reason = "Rapid server modification attack detected"
 
         elif action == discord.AuditLogAction.channel_update:
-            # Channel updates include renames, permission changes, etc.
+            # Channel updates include renames, permission changes, NSFW toggles, etc.
             action_type = "channel_update"
             target_desc = f"Channel: {getattr(entry.target, 'name', 'Unknown')}"
             
             # Track channel update for rapid attack detection
             self.rate_tracker.add_event(guild.id, attacker.id, "channel_update")
+            
+            # Check for NSFW toggling
+            before_nsfw = getattr(entry.changes.before, "nsfw", None)
+            after_nsfw = getattr(entry.changes.after, "nsfw", None)
+            if before_nsfw != after_nsfw and after_nsfw:
+                instant_punish = True
+                instant_reason = "Channel NSFW toggle detected - potential nuke attack"
+            
+            # Check for permission changes (channel locking)
+            before_overwrites = getattr(entry.changes.before, "permission_overwrites", None)
+            after_overwrites = getattr(entry.changes.after, "permission_overwrites", None)
+            if before_overwrites and after_overwrites:
+                # Detect if @everyone's permissions were restricted (channel locking)
+                try:
+                    before_everyone = before_overwrites.get(guild.id)
+                    after_everyone = after_overwrites.get(guild.id)
+                    if before_everyone and after_everyone:
+                        before_can_send = before_everyone.send_messages
+                        after_can_send = after_everyone.send_messages
+                        if before_can_send and not after_can_send:
+                            instant_punish = True
+                            instant_reason = "Channel locking detected - restricting @everyone permissions"
+                except:
+                    pass
             
             # Check if this is a channel rename
             before_name = getattr(entry.changes.before, "name", None)
@@ -1175,9 +1292,41 @@ class Antinuke(commands.Cog):
 
         elif action == discord.AuditLogAction.guild_owner_transfer:
             action_type = "owner_transfer"
+            instant_punish = True
+            instant_reason = "Guild ownership transfer - critical security event"
 
         elif action == discord.AuditLogAction.emoji_delete:
             action_type = "emoji_delete"
+            
+            # Track emoji deletion for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "emoji_delete")
+            
+            # INSTANT DETECTION: 3 emoji deletes in 2 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "emoji_delete", 2) >= 3:
+                instant_punish = True
+                instant_reason = "Mass emoji deletion attack detected"
+
+        elif action == discord.AuditLogAction.emoji_create:
+            action_type = "emoji_create"
+            
+            # Track emoji creation for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "emoji_create")
+            
+            # INSTANT DETECTION: 5 emoji creates in 2 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "emoji_create", 2) >= 5:
+                instant_punish = True
+                instant_reason = "Mass emoji creation attack detected"
+
+        elif action == discord.AuditLogAction.invite_create:
+            action_type = "invite_create"
+            
+            # Track invite creation (used in audit log spam attacks)
+            self.rate_tracker.add_event(guild.id, attacker.id, "invite_create")
+            
+            # INSTANT DETECTION: 10 invites in 2 seconds = instant ban (audit log spam)
+            if self.rate_tracker.count_events(guild.id, attacker.id, "invite_create", 2) >= 10:
+                instant_punish = True
+                instant_reason = "Mass invite creation detected (likely audit log spam attack)"
 
         elif action == discord.AuditLogAction.sticker_delete:
             action_type = "sticker_delete"

@@ -550,7 +550,7 @@ class Antinuke(commands.Cog):
 
             self.rate_tracker.clear_events(guild.id, user_id, action_type)
 
-    async def _handle_instant_punishment(self, guild: discord.Guild, user_id: int, action_type: str, target_desc: str = "") -> None:
+    async def _handle_instant_punishment(self, guild: discord.Guild, user_id: int, action_type: str, target_desc: str = "", guild_name_changed: bool = False) -> None:
         async with self._get_guild_lock(guild.id):
             if await self._is_whitelisted(guild.id, user_id):
                 return
@@ -573,6 +573,10 @@ class Antinuke(commands.Cog):
             await add_punished_user(guild.id, user_id, reason, self.bot.user.id if self.bot.user else 0, punishment)
 
             await self._delete_all_user_webhooks(guild, user_id)
+
+            # INSTANT GUILD NAME RESTORATION - restore immediately after punishment
+            if guild_name_changed:
+                asyncio.create_task(self._restore_guild_name(guild))
 
             await log_action(
                 guild.id,
@@ -858,14 +862,22 @@ class Antinuke(commands.Cog):
         If only_channel_ids / only_role_ids are provided, restore ONLY those missing.
         """
         try:
+            # Restore guild name first (if changed)
+            await self._restore_guild_name(guild)
+            
+            # Restore channel names for renamed channels
+            if only_channel_ids:
+                await self._restore_channel_names(guild, only_channel_ids)
+            
             # Restore roles if specified
             if only_role_ids:
                 await self._restore_roles(guild, only_role_ids)
             
             # Restore channels if specified
             if only_channel_ids:
-                for channel_id in only_channel_ids:
-                    await self._auto_restore_channel(guild, channel_id)
+                # Restore channels in parallel for speed
+                tasks = [self._auto_restore_channel(guild, channel_id) for channel_id in only_channel_ids]
+                await asyncio.gather(*tasks, return_exceptions=True)
         except Exception as e:
             self.logger.error(f"Auto-restore from cache failed: {e}", exc_info=True)
     
@@ -953,6 +965,7 @@ class Antinuke(commands.Cog):
 
         instant_punish = False
         instant_reason = ""
+        guild_name_changed = False
 
         if action == discord.AuditLogAction.bot_add:
             action_type = "bot_add"
@@ -1042,6 +1055,10 @@ class Antinuke(commands.Cog):
             # Track guild update for rapid attack detection
             self.rate_tracker.add_event(guild.id, attacker.id, "server_update")
             
+            # Cache original guild name for restoration
+            if before_name and before_name != after_name:
+                await self._cache_original_guild_name(guild.id, before_name)
+            
             # Detect vanity URL changes
             if before_vanity != after_vanity:
                 instant_punish = True
@@ -1052,6 +1069,8 @@ class Antinuke(commands.Cog):
             elif before_name != after_name:
                 instant_punish = True
                 instant_reason = f"Server name modification: changed from '{before_name}' to '{after_name}'"
+                # Add guild name to restore list
+                guild_name_changed = True
             # Detect server icon changes
             elif before_icon != after_icon:
                 instant_punish = True
@@ -1075,6 +1094,9 @@ class Antinuke(commands.Cog):
             before_name = getattr(entry.changes.before, "name", None)
             after_name = getattr(entry.changes.after, "name", None)
             if before_name and after_name and before_name != after_name:
+                # Cache original channel name for restoration
+                await self._cache_original_channel_name(guild.id, entry.target.id, before_name)
+                
                 # Channel rename detected
                 self.logger.security(
                     "CHANNEL_RENAME",
@@ -1097,7 +1119,19 @@ class Antinuke(commands.Cog):
             action_type = "sticker_delete"
 
         if instant_punish:
-            await self._handle_instant_punishment(guild, attacker.id, action_type or "permission_escalation", instant_reason)
+            await self._handle_instant_punishment(guild, attacker.id, action_type or "permission_escalation", instant_reason, guild_name_changed)
+            # Trigger auto-restore for all channels if channel rename attack detected
+            if action_type == "channel_update" and instant_punish:
+                # Get all recently modified channels from cache and restore them
+                from database import get_cached_channels
+                try:
+                    cached_channels = await get_cached_channels(guild.id)
+                    if cached_channels:
+                        channel_ids = {int(c.get('channel_id')) for c in cached_channels if c.get('original_name')}
+                        if channel_ids:
+                            asyncio.create_task(self._restore_channel_names(guild, channel_ids))
+                except Exception:
+                    pass
             # Targeted restore for deletes
             if action in (discord.AuditLogAction.channel_delete, discord.AuditLogAction.role_delete):
                 await self._auto_restore_from_cache(
@@ -1170,12 +1204,82 @@ class Antinuke(commands.Cog):
 
     async def _detect_rapid_channel_renames(self, guild_id: int, user_id: int) -> bool:
         """Detect if a user is rapidly renaming channels using rate tracker."""
-        # Use the rate tracker to count channel_update actions in very short window
-        # 2 channel updates in 1 second indicates a rapid attack
+        # INSTANT DETECTION: 1 channel update = instant ban
+        # No waiting for multiple renames - the first rename triggers immediate action
         recent_updates = self.rate_tracker.count_events(guild_id, user_id, "channel_update", 1)
         
-        # If 2+ channel updates in 1 second, it's definitely an attack
-        return recent_updates >= 2
+        # If 1+ channel updates in 1 second, it's an attack - instant punish
+        return recent_updates >= 1
+
+    async def _cache_original_guild_name(self, guild_id: int, original_name: str):
+        """Cache the original guild name for restoration."""
+        try:
+            from database import get_guild
+            settings = await get_guild(guild_id)
+            if settings:
+                # Store in database for persistent storage
+                settings['original_guild_name'] = original_name
+                from database import update_guild
+                await update_guild(guild.id, original_guild_name=original_name)
+        except Exception as e:
+            self.logger.error(f"Failed to cache original guild name: {e}", exc_info=True)
+
+    async def _cache_original_channel_name(self, guild_id: int, channel_id: int, original_name: str):
+        """Cache the original channel name for restoration."""
+        try:
+            from database import get_cached_channels
+            cached_channels = await get_cached_channels(guild_id)
+            for channel in cached_channels:
+                if int(channel.get('channel_id', 0)) == channel_id:
+                    # Update the cached channel with original name
+                    channel['original_name'] = original_name
+                    break
+        except Exception as e:
+            self.logger.error(f"Failed to cache original channel name: {e}", exc_info=True)
+
+    async def _restore_guild_name(self, guild: discord.Guild) -> bool:
+        """Restore the original guild name from cache."""
+        try:
+            from database import get_guild
+            settings = await get_guild(guild.id)
+            if not settings:
+                return False
+            
+            original_name = settings.get('original_guild_name')
+            if not original_name:
+                return False
+            
+            await guild.edit(name=original_name, reason="[Repent] Restored original guild name after attack")
+            self.logger.info(f"Restored guild name to '{original_name}' for guild {guild.id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to restore guild name: {e}", exc_info=True)
+            return False
+
+    async def _restore_channel_names(self, guild: discord.Guild, channel_ids: Set[int]) -> None:
+        """Restore original names for renamed channels."""
+        try:
+            from database import get_cached_channels
+            cached_channels = await get_cached_channels(guild.id)
+            
+            # Create a map of channel_id -> original_name
+            name_map = {}
+            for channel in cached_channels:
+                if channel.get('original_name') and int(channel.get('channel_id', 0)) in channel_ids:
+                    name_map[int(channel['channel_id'])] = channel['original_name']
+            
+            # Restore channel names in parallel for speed
+            tasks = []
+            for channel_id, original_name in name_map.items():
+                channel = guild.get_channel(channel_id)
+                if channel and channel.name != original_name:
+                    tasks.append(channel.edit(name=original_name, reason="[Repent] Restored original channel name after attack"))
+            
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+                self.logger.info(f"Restored {len(tasks)} channel names for guild {guild.id}")
+        except Exception as e:
+            self.logger.error(f"Failed to restore channel names: {e}", exc_info=True)
 
     # Primary detection source: audit log only.
     @commands.Cog.listener()

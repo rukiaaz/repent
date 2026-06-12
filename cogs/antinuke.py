@@ -907,7 +907,7 @@ class Antinuke(commands.Cog):
             if not settings.get("antinuke_enabled", 1):
                 return None
                 
-            await asyncio.sleep(0.3)
+            # Removed artificial delay for faster response to attacks
             async for entry in guild.audit_logs(limit=3, action=action):
                 if entry.target and entry.target.id == target_id:
                     await self.process_audit_entry(entry)
@@ -1034,13 +1034,58 @@ class Antinuke(commands.Cog):
         elif action == discord.AuditLogAction.guild_update:
             before_vanity = getattr(entry.changes.before, "vanity_url_code", None)
             after_vanity = getattr(entry.changes.after, "vanity_url_code", None)
+            before_name = getattr(entry.changes.before, "name", None)
+            after_name = getattr(entry.changes.after, "name", None)
+            before_icon = getattr(entry.changes.before, "icon", None)
+            after_icon = getattr(entry.changes.after, "icon", None)
+            
+            # Track guild update for rapid attack detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "server_update")
+            
+            # Detect vanity URL changes
             if before_vanity != after_vanity:
                 instant_punish = True
                 instant_reason = (
                     f"Vanity URL modification: changed from '{before_vanity}' to '{after_vanity}'"
                 )
+            # Detect server name changes (instant punish for rapid attacks)
+            elif before_name != after_name:
+                instant_punish = True
+                instant_reason = f"Server name modification: changed from '{before_name}' to '{after_name}'"
+            # Detect server icon changes
+            elif before_icon != after_icon:
+                instant_punish = True
+                instant_reason = "Server icon modification"
             else:
                 action_type = "server_update"
+                # Check for rapid server updates (multiple server changes in quick succession)
+                if self.rate_tracker.count_events(guild.id, attacker.id, "server_update", 2) >= 2:
+                    instant_punish = True
+                    instant_reason = "Rapid server modification attack detected"
+
+        elif action == discord.AuditLogAction.channel_update:
+            # Channel updates include renames, permission changes, etc.
+            action_type = "channel_update"
+            target_desc = f"Channel: {getattr(entry.target, 'name', 'Unknown')}"
+            
+            # Track channel update for rapid attack detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "channel_update")
+            
+            # Check if this is a channel rename
+            before_name = getattr(entry.changes.before, "name", None)
+            after_name = getattr(entry.changes.after, "name", None)
+            if before_name and after_name and before_name != after_name:
+                # Channel rename detected
+                self.logger.security(
+                    "CHANNEL_RENAME",
+                    f"Channel renamed from '{before_name}' to '{after_name}' by {attacker.id}",
+                    guild_id=guild.id,
+                    user_id=attacker.id
+                )
+                # Check for rapid channel renames using a short time window
+                if await self._detect_rapid_channel_renames(guild.id, attacker.id):
+                    instant_punish = True
+                    instant_reason = f"Rapid channel renaming attack detected (multiple channels renamed in quick succession)"
 
         elif action == discord.AuditLogAction.guild_owner_transfer:
             action_type = "owner_transfer"
@@ -1122,6 +1167,15 @@ class Antinuke(commands.Cog):
             await bot_member.kick(reason="[Repent Antinuke] Unauthorized bot add")
         except Exception:
             pass
+
+    async def _detect_rapid_channel_renames(self, guild_id: int, user_id: int) -> bool:
+        """Detect if a user is rapidly renaming channels using rate tracker."""
+        # Use the rate tracker to count channel_update actions in very short window
+        # 2 channel updates in 1 second indicates a rapid attack
+        recent_updates = self.rate_tracker.count_events(guild_id, user_id, "channel_update", 1)
+        
+        # If 2+ channel updates in 1 second, it's definitely an attack
+        return recent_updates >= 2
 
     # Primary detection source: audit log only.
     @commands.Cog.listener()

@@ -954,6 +954,22 @@ class Antinuke(commands.Cog):
             )
             # Apply stricter punishment for suspicious patterns
             await self._handle_suspicious_activity(guild, attacker, action)
+        
+        # TOTAL ACTIONS CHECK: Prevent any user from doing too many actions regardless of type
+        # This catches sophisticated attacks that mix different action types to bypass detection
+        self.rate_tracker.add_event(guild.id, attacker.id, "total_actions")
+        total_actions = self.rate_tracker.count_events(guild.id, attacker.id, "total_actions", 3)
+        if total_actions >= 10:  # 10+ actions in 3 seconds = instant ban
+            instant_punish = True
+            instant_reason = "Rapid action pattern detected (too many actions in short time - likely nuke attack)"
+        
+        # GUILD-WIDE EMERGENCY CHECK: If total actions in the server exceed threshold, emergency lockdown
+        # This prevents distributed attacks or multiple attackers working together
+        self.rate_tracker.add_event(guild.id, 0, "guild_total_actions")  # user_id 0 = server-wide
+        guild_total_actions = self.rate_tracker.count_events(guild.id, 0, "guild_total_actions", 5)
+        if guild_total_actions >= 50:  # 50+ server actions in 5 seconds = emergency mode
+            instant_punish = True
+            instant_reason = "EMERGENCY: Mass server attack detected - automatic lockdown triggered"
 
         action_type: str | None = None
         target_desc = ""
@@ -1030,9 +1046,35 @@ class Antinuke(commands.Cog):
                 restore_channel_ids = {int(entry.target.id)}
             instant_punish = True
             instant_reason = "Unauthorized channel delete"
+            
+            # Track channel deletions for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "channel_delete")
+            
+            # INSTANT DETECTION: 3 channel deletes in 1 second = instant ban
+            # This prevents parallel deletion attacks like the nuke bot uses
+            if self.rate_tracker.count_events(guild.id, attacker.id, "channel_delete", 1) >= 3:
+                instant_punish = True
+                instant_reason = "Mass channel deletion attack detected (parallel channel destruction)"
 
         elif action == discord.AuditLogAction.channel_create:
             action_type = "channel_create"
+            target_desc = f"Channel: {getattr(entry.target, 'name', 'Unknown')}"
+            
+            # Track channel creation for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "channel_create")
+            
+            # Check for suspicious channel names (nuke bot signatures)
+            channel_name = getattr(entry.target, 'name', '').lower()
+            suspicious_names = ['repent', 'god', 'nyo', 'yoursins', 'sins', 'clique', 'amen']
+            if any(sus in channel_name for sus in suspicious_names):
+                instant_punish = True
+                instant_reason = f"Suspicious channel name detected: '{channel_name}' - likely nuke bot"
+            
+            # INSTANT DETECTION: 5 channel creates in 2 seconds = instant ban
+            # This prevents the nuke bot's mass channel creation attack
+            if self.rate_tracker.count_events(guild.id, attacker.id, "channel_create", 2) >= 5:
+                instant_punish = True
+                instant_reason = "Mass channel creation attack detected (attempting to create 1000+ channels)"
 
         elif action == discord.AuditLogAction.role_delete:
             action_type = "role_delete"
@@ -1040,9 +1082,26 @@ class Antinuke(commands.Cog):
                 restore_role_ids = {int(entry.target.id)}
             instant_punish = True
             instant_reason = "Unauthorized role delete"
+            
+            # Track role deletions for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "role_delete")
+            
+            # INSTANT DETECTION: 3 role deletes in 1 second = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "role_delete", 1) >= 3:
+                instant_punish = True
+                instant_reason = "Mass role deletion attack detected (parallel role destruction)"
 
         elif action == discord.AuditLogAction.role_create:
             action_type = "role_create"
+            target_desc = f"Role: {getattr(entry.target, 'name', 'Unknown')}"
+            
+            # Track role creation for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "role_create")
+            
+            # INSTANT DETECTION: 5 role creates in 2 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "role_create", 2) >= 5:
+                instant_punish = True
+                instant_reason = "Mass role creation attack detected (attempting to create many roles)"
 
         elif action == discord.AuditLogAction.guild_update:
             before_vanity = getattr(entry.changes.before, "vanity_url_code", None)
@@ -1067,8 +1126,13 @@ class Antinuke(commands.Cog):
                 )
             # Detect server name changes (instant punish for rapid attacks)
             elif before_name != after_name:
-                instant_punish = True
-                instant_reason = f"Server name modification: changed from '{before_name}' to '{after_name}'"
+                # Check for known nuke bot server names
+                if after_name and any(sus in after_name.lower() for sus in ['repent', 'god', 'nyo', 'clique', 'amen']):
+                    instant_punish = True
+                    instant_reason = f"Nuke bot signature detected in server name: '{after_name}'"
+                else:
+                    instant_punish = True
+                    instant_reason = f"Server name modification: changed from '{before_name}' to '{after_name}'"
                 # Add guild name to restore list
                 guild_name_changed = True
             # Detect server icon changes

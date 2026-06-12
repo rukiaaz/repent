@@ -254,31 +254,46 @@ class BackupRestoreView(discord.ui.View):
                 )
 
         if channel_type == 0:
-            await guild.create_text_channel(
-                name=payload_name,
-                category=category,
-                position=position,
-                topic=topic,
-                nsfw=nsfw,
-                slowmode_delay=slowmode_delay,
-                overwrites=overwrites,
-                reason="[Repent Backup] Recreated from backup",
-            )
+            try:
+                await guild.create_text_channel(
+                    name=payload_name,
+                    category=category,
+                    position=position,
+                    topic=topic,
+                    nsfw=nsfw,
+                    slowmode_delay=slowmode_delay,
+                    overwrites=overwrites,
+                    reason="[Repent Backup] Recreated from backup",
+                )
+            except discord.HTTPException as e:
+                if e.code == 30013:  # Maximum number of channels reached
+                    raise Exception(f"Cannot recreate channel '{payload_name}' - server has reached maximum channel limit (500)")
+                raise
         elif channel_type == 2:
-            await guild.create_voice_channel(
-                name=payload_name,
-                category=category,
-                position=position,
-                overwrites=overwrites,
-                reason="[Repent Backup] Recreated from backup",
-            )
+            try:
+                await guild.create_voice_channel(
+                    name=payload_name,
+                    category=category,
+                    position=position,
+                    overwrites=overwrites,
+                    reason="[Repent Backup] Recreated from backup",
+                )
+            except discord.HTTPException as e:
+                if e.code == 30013:  # Maximum number of channels reached
+                    raise Exception(f"Cannot recreate channel '{payload_name}' - server has reached maximum channel limit (500)")
+                raise
         elif channel_type == 4:
-            await guild.create_category(
-                name=payload_name,
-                position=position,
-                overwrites=overwrites,
-                reason="[Repent Backup] Recreated from backup",
-            )
+            try:
+                await guild.create_category(
+                    name=payload_name,
+                    position=position,
+                    overwrites=overwrites,
+                    reason="[Repent Backup] Recreated from backup",
+                )
+            except discord.HTTPException as e:
+                if e.code == 30013:  # Maximum number of channels reached
+                    raise Exception(f"Cannot recreate category '{payload_name}' - server has reached maximum channel limit (500)")
+                raise
 
     async def reset_channel_settings(
         self, guild: discord.Guild, channel: discord.abc.GuildChannel, ch_data: dict

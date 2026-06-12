@@ -808,6 +808,14 @@ class Antinuke(commands.Cog):
                 await guild.create_category(**kwargs)
             
             return True
+        except discord.HTTPException as e:
+            if e.code == 30013:  # Maximum number of channels reached
+                self.logger.warning(f"Cannot auto-restore channel {channel_id} - maximum channel limit (500) reached")
+                # Log this but don't crash the restore process
+                return False
+            else:
+                self.logger.error(f"Failed to auto-restore channel {channel_id}: {e}", exc_info=True)
+                return False
         except Exception as e:
             self.logger.error(f"Failed to auto-restore channel {channel_id}: {e}", exc_info=True)
             return False

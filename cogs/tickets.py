@@ -82,6 +82,13 @@ class TicketSystem(commands.Cog):
                 embed=error_embed("Permission Error", "I don't have permission to create channels."),
                 ephemeral=True
             )
+        except discord.HTTPException as e:
+            if e.code == 30013:  # Maximum number of channels reached
+                return await interaction.response.send_message(
+                    embed=error_embed("Channel Limit Reached", "Server has reached maximum channel limit (500). Please delete some channels before creating tickets."),
+                    ephemeral=True
+                )
+            raise
         
         # Store ticket info
         self.active_tickets[channel.id] = {

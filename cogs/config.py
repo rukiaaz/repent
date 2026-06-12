@@ -161,6 +161,16 @@ class InteractiveSetupView(discord.ui.View):
                 )
             except discord.Forbidden:
                 return await interaction.response.send_message("❌ I do not have permission to create channels.", ephemeral=True)
+            except discord.HTTPException as e:
+                if e.code == 30013:  # Maximum number of channels reached
+                    # Use first available text channel instead
+                    if guild.text_channels:
+                        ch = guild.text_channels[0]
+                        await interaction.response.send_message(f"⚠️ Server has reached maximum channel limit (500). Using `{ch.name}` for logs instead.", ephemeral=True)
+                    else:
+                        return await interaction.response.send_message("❌ Server has reached maximum channel limit (500) and has no text channels. Please delete some channels first.", ephemeral=True)
+                else:
+                    return await interaction.response.send_message(f"❌ Failed to create channel: {e}", ephemeral=True)
 
         self.log_channel = ch
         await update_guild(guild.id, log_channel=ch.id)
@@ -358,6 +368,16 @@ class Config(commands.Cog):
                 )
             except discord.Forbidden:
                 return await interaction.followup.send(embed=error_embed("Failed to create `#repent-logs` channel due to missing permissions."))
+            except discord.HTTPException as e:
+                if e.code == 30013:  # Maximum number of channels reached
+                    # Use first available text channel instead
+                    if guild.text_channels:
+                        ch = guild.text_channels[0]
+                        await interaction.followup.send(embed=error_embed(f"Server has reached maximum channel limit (500). Using `{ch.name}` for logs instead."))
+                    else:
+                        return await interaction.followup.send(embed=error_embed("Server has reached maximum channel limit (500) and has no text channels to use for logs. Please delete some channels first."))
+                else:
+                    return await interaction.followup.send(embed=error_embed(f"Failed to create `#repent-logs` channel: {e}"))
 
         # 2. Update settings in DB
         await update_guild(guild.id, log_channel=ch.id, punishment="ban", antinuke_enabled=1, automod_enabled=1, raid_mode=0)

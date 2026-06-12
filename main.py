@@ -174,6 +174,17 @@ class Repent(commands.Bot):
             except discord.Forbidden:
                 self.logger.warning(f"Failed to create announcement channel for guild {guild.id} - missing permissions")
                 return None
+            except discord.HTTPException as e:
+                if e.code == 30013:  # Maximum number of channels reached
+                    self.logger.warning(f"Cannot create announcement channel for guild {guild.id} - maximum channel limit (500) reached")
+                    # Try to find any existing text channel to use instead
+                    if guild.text_channels:
+                        self.logger.info(f"Using first available text channel for announcements in guild {guild.id}")
+                        return guild.text_channels[0]
+                    return None
+                else:
+                    self.logger.error(f"HTTP error creating announcement channel for guild {guild.id}: {e}", exc_info=True)
+                    return None
             except Exception as e:
                 self.logger.error(f"Error creating announcement channel for guild {guild.id}: {e}", exc_info=True)
                 return None

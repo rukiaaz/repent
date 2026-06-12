@@ -180,6 +180,26 @@ class Antinuke(commands.Cog):
         
         # Attack detection timestamps per guild
         self._attack_detected_time: Dict[int, datetime] = {}
+        
+        # Event deduplication: {(guild_id, user_id, action_type, target_id): timestamp}
+        self._processed_events: Dict[Tuple[int, int, str, int], datetime] = {}
+        
+        # Lock for thread-safe operations
+        self._lock = asyncio.Lock()
+        
+        # API rate limiting for audit log queries (prevent rate limit exhaustion)
+        self._audit_log_rate_limiter: Dict[int, datetime] = {}  # guild_id -> last query time
+        
+        # Graceful degradation: component health status
+        self._component_health: Dict[str, bool] = {
+            "database": True,
+            "audit_log": True,
+            "rate_tracker": True,
+            "cache": True
+        }
+        
+        # Fallback mode flags
+        self._fallback_mode = False
 
     def _get_guild_lock(self, guild_id: int) -> asyncio.Lock:
         self._locks.setdefault(guild_id, asyncio.Lock())
@@ -245,6 +265,120 @@ class Antinuke(commands.Cog):
         """Cache safe admins list with current settings and timestamp."""
         self._safe_admins_cache[guild_id] = (safe_admins_list, settings_json, datetime.now(timezone.utc))
 
+    def _is_event_processed(self, guild_id: int, user_id: int, action_type: str, target_id: int) -> bool:
+        """Check if an event has already been processed to prevent duplicate punishment."""
+        event_key = (guild_id, user_id, action_type, target_id)
+        if event_key in self._processed_events:
+            # Check if the event was processed recently (within 10 seconds)
+            if datetime.now(timezone.utc) - self._processed_events[event_key] < timedelta(seconds=10):
+                return True
+            # Event is old, remove it
+            del self._processed_events[event_key]
+        return False
+
+    def _mark_event_processed(self, guild_id: int, user_id: int, action_type: str, target_id: int) -> None:
+        """Mark an event as processed to prevent duplicate punishment."""
+        event_key = (guild_id, user_id, action_type, target_id)
+        self._processed_events[event_key] = datetime.now(timezone.utc)
+
+    async def _can_query_audit_log(self, guild_id: int) -> bool:
+        """Check if we can query audit log for this guild without hitting rate limits."""
+        async with self._lock:
+            now = datetime.now(timezone.utc)
+            last_query = self._audit_log_rate_limiter.get(guild_id)
+            
+            # Allow 1 audit log query per second per guild (conservative rate limit)
+            if last_query and (now - last_query).total_seconds() < 1.0:
+                return False
+            
+            self._audit_log_rate_limiter[guild_id] = now
+            return True
+
+    async def _wait_for_audit_log_quota(self, guild_id: int) -> None:
+        """Wait if necessary to respect audit log rate limits."""
+        async with self._lock:
+            now = datetime.now(timezone.utc)
+            last_query = self._audit_log_rate_limiter.get(guild_id)
+            
+            if last_query:
+                time_since_last = (now - last_query).totalseconds()
+                if time_since_last < 1.0:
+                    # Wait until we can make another query
+                    wait_time = 1.0 - time_since_last
+                    await asyncio.sleep(wait_time)
+            
+            self._audit_log_rate_limiter[guild_id] = datetime.now(timezone.utc)
+
+    def _validate_user_permission(self, guild: discord.Guild, member: discord.Member, action_type: str, target_id: int = 0) -> bool:
+        """Validate if the user actually has permission to perform the action.
+        
+        This prevents false positives where users are punished for actions they couldn't actually perform.
+        Returns True if the user has permission, False if they don't (should not be punished).
+        """
+        try:
+            # Check basic guild permissions first
+            if not member.guild_permissions.view_audit_log:
+                # User can't view audit logs, likely doesn't have high permissions
+                # But they could still have been given specific permissions
+                pass
+            
+            # Check specific action permissions
+            if action_type == "channel_update":
+                # Check if user can manage channels
+                if not member.guild_permissions.manage_channels:
+                    # User doesn't have permission to manage channels
+                    # They shouldn't be punished for channel updates they couldn't perform
+                    return False
+                    
+            elif action_type in ["role_create", "role_update", "role_delete"]:
+                # Check if user can manage roles
+                if not member.guild_permissions.manage_roles:
+                    return False
+                    
+            elif action_type in ["ban", "kick"]:
+                # Check if user can ban/kick
+                if action_type == "ban" and not member.guild_permissions.ban_members:
+                    return False
+                if action_type == "kick" and not member.guild_permissions.kick_members:
+                    return False
+                    
+            elif action_type == "guild_update":
+                # Check if user can manage server
+                if not member.guild_permissions.manage_guild:
+                    return False
+            
+            # If no specific permission check failed, assume they might have permission
+            # This is a conservative approach to avoid bypassing legitimate punishment
+            return True
+            
+        except Exception as e:
+            # If we can't validate permissions, err on the side of caution and allow punishment
+            self.logger.warning(f"Failed to validate user permissions for {member.id}: {e}")
+            return True
+
+    def _set_component_health(self, component: str, healthy: bool) -> None:
+        """Set the health status of a component."""
+        self._component_health[component] = healthy
+        
+        # Check if we need to enable fallback mode
+        critical_components = ["database", "audit_log"]
+        if not all(self._component_health.get(comp, True) for comp in critical_components):
+            if not self._fallback_mode:
+                self._fallback_mode = True
+                self.logger.warning(f"Enabled fallback mode - critical components degraded: {critical_components}")
+        else:
+            if self._fallback_mode:
+                self._fallback_mode = False
+                self.logger.info("Disabled fallback mode - all critical components healthy")
+
+    def _is_component_healthy(self, component: str) -> bool:
+        """Check if a component is healthy."""
+        return self._component_health.get(component, True)
+
+    def _should_use_fallback(self) -> bool:
+        """Check if we should use fallback mode."""
+        return self._fallback_mode
+
     async def _cleanup_loop(self):
         """Periodically clean up old processed entries to prevent memory leaks."""
         await self.bot.wait_until_ready()
@@ -297,12 +431,29 @@ class Antinuke(commands.Cog):
                 
                 # Clean up emergency mode (lift lockdown after 5 minutes)
                 emergency_cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
-                old_emergency_guilds = [guild_id for guild_id, timestamp in self._attack_detected_time.items() if timestamp < emergency_cutoff]
-                for guild_id in old_emergency_guilds:
-                    self._emergency_mode_active.discard(guild_id)
-                    del self._attack_detected_time[guild_id]
+                async with self._lock:
+                    old_emergency_guilds = [guild_id for guild_id, timestamp in self._attack_detected_time.items() if timestamp < emergency_cutoff]
+                    for guild_id in old_emergency_guilds:
+                        self._emergency_mode_active.discard(guild_id)
+                        del self._attack_detected_time[guild_id]
                 if old_emergency_guilds:
                     self.logger.info(f"Lifted emergency lockdown for {len(old_emergency_guilds)} guilds")
+                
+                # Clean up processed events (prevent memory buildup)
+                event_cutoff = datetime.now(timezone.utc) - timedelta(seconds=30)  # 30 seconds
+                old_event_keys = [key for key, timestamp in self._processed_events.items() if timestamp < event_cutoff]
+                for key in old_event_keys:
+                    del self._processed_events[key]
+                if old_event_keys:
+                    self.logger.debug(f"Cleaned up {len(old_event_keys)} old processed events")
+                
+                # Clean up audit log rate limiter (remove entries older than 1 minute)
+                audit_log_cutoff = datetime.now(timezone.utc) - timedelta(minutes=1)
+                old_audit_log_keys = [guild_id for guild_id, timestamp in self._audit_log_rate_limiter.items() if timestamp < audit_log_cutoff]
+                for guild_id in old_audit_log_keys:
+                    del self._audit_log_rate_limiter[guild_id]
+                if old_audit_log_keys:
+                    self.logger.debug(f"Cleaned up {len(old_audit_log_keys)} old audit log rate limiter entries")
                     
             except asyncio.CancelledError:
                 break
@@ -576,27 +727,64 @@ class Antinuke(commands.Cog):
 
             self.rate_tracker.clear_events(guild.id, user_id, action_type)
 
-    async def _handle_instant_punishment(self, guild: discord.Guild, user_id: int, action_type: str, target_desc: str = "", guild_name_changed: bool = False) -> None:
+    async def _handle_instant_punishment(self, guild: discord.Guild, user_id: int, action_type: str, target_desc: str = "", guild_name_changed: bool = False, target_id: int = 0) -> None:
         async with self._get_guild_lock(guild.id):
+            # Event deduplication check - prevent duplicate punishment for same event
+            if target_id and self._is_event_processed(guild.id, user_id, action_type, target_id):
+                self.logger.debug(f"Event already processed - skipping duplicate punishment for user {user_id}, action {action_type}, target {target_id}")
+                return
+            
             if await self._is_whitelisted(guild.id, user_id):
                 return
 
-            settings = await get_guild(guild.id)
-            if not settings.get("antinuke_enabled", 1):
-                return
+            # Graceful degradation: if database is unhealthy, use fallback mode
+            if self._should_use_fallback():
+                self.logger.warning("Operating in fallback mode - using degraded antinuke functionality")
+                # In fallback mode, we only perform essential checks without database
+                # Still punish based on critical actions, but skip database-dependent features
+            else:
+                settings = await get_guild(guild.id)
+                if not settings.get("antinuke_enabled", 1):
+                    return
 
             member = guild.get_member(user_id) or None
             if not member:
                 try:
                     member = await guild.fetch_member(user_id)
-                except Exception:
+                except Exception as e:
+                    self.logger.error(f"Failed to fetch member {user_id}: {e}")
+                    self._set_component_health("audit_log", False)
                     return
 
-            punishment = settings.get("punishment", DEFAULT_PUNISHMENT)
+            # Permission validation - check if user actually has permission for this action
+            if not self._validate_user_permission(guild, member, action_type, target_id):
+                self.logger.warning(
+                    f"Skipping punishment for {member.id} - user lacks permission for action {action_type}"
+                )
+                return
+
+            punishment = settings.get("punishment", DEFAULT_PUNISHMENT) if not self._should_use_fallback() else DEFAULT_PUNISHMENT
             reason = f"[Repent Antinuke] Instant Punishment: {target_desc}"
 
-            await self._apply_punishment(guild, member, punishment, reason)
-            await add_punished_user(guild.id, user_id, reason, self.bot.user.id if self.bot.user else 0, punishment)
+            try:
+                await self._apply_punishment(guild, member, punishment, reason)
+            except Exception as e:
+                self.logger.error(f"Failed to apply punishment: {e}")
+                # Don't mark database as unhealthy for punishment failures (could be permission issues)
+                return
+            
+            # Skip database operations in fallback mode
+            if not self._should_use_fallback():
+                try:
+                    await add_punished_user(guild.id, user_id, reason, self.bot.user.id if self.bot.user else 0, punishment)
+                except Exception as e:
+                    self.logger.error(f"Failed to add punished user to database: {e}")
+                    self._set_component_health("database", False)
+                    # Continue anyway - punishment already applied
+
+            # Mark event as processed to prevent duplicate punishment
+            if target_id:
+                self._mark_event_processed(guild.id, user_id, action_type, target_id)
 
             await self._delete_all_user_webhooks(guild, user_id)
 
@@ -1379,7 +1567,8 @@ class Antinuke(commands.Cog):
             action_type = "sticker_delete"
 
         if instant_punish:
-            await self._handle_instant_punishment(guild, attacker.id, action_type or "permission_escalation", instant_reason, guild_name_changed)
+            target_id = getattr(entry.target, 'id', 0) if entry.target else 0
+            await self._handle_instant_punishment(guild, attacker.id, action_type or "permission_escalation", instant_reason, guild_name_changed, target_id)
             # Trigger auto-restore for all channels if channel rename attack detected
             if action_type == "channel_update" and instant_punish:
                 # Get all channels from latest snapshot and restore their names immediately
@@ -1414,6 +1603,7 @@ class Antinuke(commands.Cog):
                 attacker.id,
                 "webhook_create",
                 "Unauthorized webhook create",
+                target_id=extra_webhook_id,
             )
             return
 
@@ -1614,12 +1804,18 @@ class Antinuke(commands.Cog):
                     guild_id=before.guild.id
                 )
                 
-                # Put guild in emergency mode
-                self._emergency_mode_active.add(before.guild.id)
-                self._attack_detected_time[before.guild.id] = datetime.now(timezone.utc)
+                # Thread-safe emergency mode activation
+                async with self._lock:
+                    # Put guild in emergency mode (only if not already in emergency mode)
+                    if before.guild.id not in self._emergency_mode_active:
+                        self._emergency_mode_active.add(before.guild.id)
+                        self._attack_detected_time[before.guild.id] = datetime.now(timezone.utc)
                 
                 # Get the most recent channel updater from audit logs and ban them
                 try:
+                    # Respect rate limits for audit log queries
+                    await self._wait_for_audit_log_quota(before.guild.id)
+                    
                     async for entry in before.guild.audit_logs(action=discord.AuditLogAction.channel_update, limit=5):
                         if entry.user:
                             cache_key = (before.guild.id, entry.user.id)
@@ -1627,14 +1823,17 @@ class Antinuke(commands.Cog):
                             if cache_key not in self._punished_users_cache or \
                                datetime.now(timezone.utc) - self._punished_users_cache[cache_key] > timedelta(seconds=10):
                                 await self._handle_instant_punishment(before.guild, entry.user.id, "channel_update",
-                                    "EMERGENCY: Mass parallel channel rename attack detected", False)
+                                    "EMERGENCY: Mass parallel channel rename attack detected", False, after.id)
                                 self._punished_users_cache[cache_key] = datetime.now(timezone.utc)
                             break
                 except Exception as e:
                     self.logger.error(f"Failed emergency punishment: {e}")
             
             # If guild is in emergency mode, auto-restore all renamed channels immediately
-            if before.guild.id in self._emergency_mode_active:
+            async with self._lock:
+                in_emergency = before.guild.id in self._emergency_mode_active
+            
+            if in_emergency:
                 try:
                     await after.edit(name=before.name, reason="[Repent] Emergency restoration during attack")
                     self.logger.security("EMERGENCY_RESTORE", f"Emergency restored channel to '{before.name}'", guild_id=before.guild.id)
@@ -1644,6 +1843,9 @@ class Antinuke(commands.Cog):
             
             # Find who did this by checking recent audit logs for immediate punishment
             try:
+                # Respect rate limits for audit log queries
+                await self._wait_for_audit_log_quota(before.guild.id)
+                
                 async for entry in before.guild.audit_logs(action=discord.AuditLogAction.channel_update, limit=1):
                     if entry.target.id == after.id and entry.changes.before.name == before.name:
                         user = entry.user
@@ -1669,7 +1871,7 @@ class Antinuke(commands.Cog):
                             try:
                                 await self._handle_instant_punishment(before.guild, user.id, "channel_update", 
                                     f"PARALLEL ATTACK: Channel renamed from '{before.name}' to '{after.name}' (direct detection)", 
-                                    guild_name_changed)
+                                    guild_name_changed, after.id)
                                 
                                 # Mark user as punished (circuit breaker)
                                 self._punished_users_cache[cache_key] = datetime.now(timezone.utc)
@@ -1683,6 +1885,9 @@ class Antinuke(commands.Cog):
                             except Exception as e:
                                 self.logger.error(f"Failed instant punishment on direct detection: {e}")
                         break
+            except discord.HTTPException as e:
+                self.logger.error(f"Audit log query failed with HTTP error: {e}")
+                self._set_component_health("audit_log", False)
             except Exception as e:
                 self.logger.error(f"Error in direct channel rename detection: {e}")
 

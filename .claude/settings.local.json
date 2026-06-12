@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /d/repentv3/cogs/*.py)",
+      "Bash(ls:*)",
+      "Bash(python -m py_compile cogs/*.py)",
+      "Bash(grep -r \"from database import\\\\|from utils import\\\\|from config import\" cogs/*.py)",
+      "Bash(python:*)",
+      "Bash(grep:*)",
+      "Bash(tail -20 /d/repentv3/cogs/*.py)"
+    ]
+  }
+}

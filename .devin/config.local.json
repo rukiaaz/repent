@@ -8,7 +8,15 @@
       "Exec(tasklist)",
       "Exec(taskkill)",
       "Exec(net file)",
-      "Exec(findstr)"
+      "Exec(findstr)",
+      "Exec(git status)",
+      "Exec(git diff)",
+      "Exec(git log)",
+      "Exec(git add)",
+      "Exec(git commit)",
+      "Exec(git push)",
+      "Exec(if)",
+      "Exec(Remove-Item)"
     ]
   }
 }

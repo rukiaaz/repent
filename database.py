@@ -919,10 +919,14 @@ async def is_role_whitelisted(guild_id: int, role_id: int) -> bool:
     return row is not None
 
 
-async def user_has_whitelisted_role(guild_id: int, user_id: int, user_roles: List[int]) -> bool:
+async def user_has_whitelisted_role(guild_id: int, user_id: int, user_roles) -> bool:
     """Check if user has any whitelisted roles using optimized SQL query."""
     if not user_roles:
         return False
+    
+    # Convert to list if it's a set (handle both types for robustness)
+    if isinstance(user_roles, set):
+        user_roles = list(user_roles)
     
     # Optimized: Use SQL IN clause instead of fetching all roles
     db = await _get_db()

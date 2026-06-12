@@ -941,8 +941,28 @@ class Antinuke(commands.Cog):
         attacker = entry.user
         action = entry.action
 
-        if await self._is_whitelisted(guild.id, attacker.id):
-            return
+        # CRITICAL: Skip whitelist check for extremely dangerous actions
+        # Even whitelisted users should be prevented from performing these critical attack vectors
+        critical_actions = {
+            discord.AuditLogAction.channel_update,  # Channel rename, locking, NSFW toggle
+            discord.AuditLogAction.channel_delete,   # Channel deletion
+            discord.AuditLogAction.channel_create,   # Mass channel creation
+            discord.AuditLogAction.role_delete,      # Role deletion  
+            discord.AuditLogAction.role_create,      # Role creation (with dangerous perms)
+            discord.AuditLogAction.role_update,      # Role permission escalation
+            discord.AuditLogAction.guild_update,     # Server name/icon changes
+            discord.AuditLogAction.guild_owner_transfer, # Ownership transfer
+            discord.AuditLogAction.webhook_create,  # Webhook creation
+            discord.AuditLogAction.webhook_delete,  # Webhook deletion
+            discord.AuditLogAction.member_role_update, # Dangerous role assignment
+            discord.AuditLogAction.ban,             # Mass bans
+            discord.AuditLogAction.kick,            # Mass kicks
+            discord.AuditLogAction.unban,           # Mass unbans
+        }
+        
+        if action not in critical_actions:
+            if await self._is_whitelisted(guild.id, attacker.id):
+                return
 
         # Additional security: Check for suspicious patterns
         if self._detect_suspicious_pattern(attacker, action, entry):

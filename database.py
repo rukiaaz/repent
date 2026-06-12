@@ -193,9 +193,10 @@ async def init_db():
             else:
                 raise e
 
-    await db.executescript("""
-        -- Guild settings
-        CREATE TABLE IF NOT EXISTS guilds (
+    # Define all required tables
+    table_creation_scripts = [
+        # Guild settings
+        """CREATE TABLE IF NOT EXISTS guilds (
             guild_id INTEGER PRIMARY KEY,
             log_channel INTEGER DEFAULT 0,
             mod_channel INTEGER DEFAULT 0,
@@ -244,10 +245,10 @@ async def init_db():
             log_role_events INTEGER DEFAULT 0,
             log_nickname_events INTEGER DEFAULT 0,
             anti_token_enabled INTEGER DEFAULT 0
-        );
+        )""",
 
-        -- Raid log for history
-        CREATE TABLE IF NOT EXISTS raid_log (
+        # Raid log for history
+        """CREATE TABLE IF NOT EXISTS raid_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             started_at TEXT DEFAULT '',
@@ -255,39 +256,39 @@ async def init_db():
             joins_detected INTEGER DEFAULT 0,
             lockdown_triggered INTEGER DEFAULT 0,
             resolved INTEGER DEFAULT 0
-        );
+        )""",
 
-        -- Automod strikes for escalating punishments
-        CREATE TABLE IF NOT EXISTS automod_strikes (
+        # Automod strikes for escalating punishments
+        """CREATE TABLE IF NOT EXISTS automod_strikes (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             strikes INTEGER DEFAULT 0,
             last_strike_at TEXT DEFAULT '',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- Whitelist: trusted users per guild
-        CREATE TABLE IF NOT EXISTS whitelist (
+        # Whitelist: trusted users per guild
+        """CREATE TABLE IF NOT EXISTS whitelist (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             trust_level INTEGER DEFAULT 1,
             added_by INTEGER DEFAULT 0,
             added_at TEXT DEFAULT '',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- Action log (moderation + antinuke actions)
-        CREATE TABLE IF NOT EXISTS action_log (
+        # Action log (moderation + antinuke actions)
+        """CREATE TABLE IF NOT EXISTS action_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             user_id INTEGER DEFAULT 0,
             action_type TEXT NOT NULL,
             details TEXT DEFAULT '{}',
             timestamp TEXT DEFAULT ''
-        );
+        )""",
 
-        -- Cached roles for rollback
-        CREATE TABLE IF NOT EXISTS cached_roles (
+        # Cached roles for rollback
+        """CREATE TABLE IF NOT EXISTS cached_roles (
             guild_id INTEGER NOT NULL,
             role_id INTEGER NOT NULL,
             name TEXT DEFAULT '',
@@ -299,10 +300,10 @@ async def init_db():
             json_overwrites TEXT DEFAULT '{}',
             cached_at TEXT DEFAULT '',
             PRIMARY KEY (guild_id, role_id)
-        );
+        )""",
 
-        -- Cached channels for rollback
-        CREATE TABLE IF NOT EXISTS cached_channels (
+        # Cached channels for rollback
+        """CREATE TABLE IF NOT EXISTS cached_channels (
             guild_id INTEGER NOT NULL,
             channel_id INTEGER NOT NULL,
             name TEXT DEFAULT '',
@@ -315,10 +316,10 @@ async def init_db():
             json_overwrites TEXT DEFAULT '{}',
             cached_at TEXT DEFAULT '',
             PRIMARY KEY (guild_id, channel_id)
-        );
+        )""",
 
-        -- Moderation cases
-        CREATE TABLE IF NOT EXISTS cases (
+        # Moderation cases
+        """CREATE TABLE IF NOT EXISTS cases (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             case_number INTEGER NOT NULL,
@@ -332,10 +333,10 @@ async def init_db():
             resolved_by INTEGER DEFAULT 0,
             resolved_at TEXT DEFAULT '',
             resolved_reason TEXT DEFAULT ''
-        );
+        )""",
 
-        -- Modmail threads
-        CREATE TABLE IF NOT EXISTS modmail_threads (
+        # Modmail threads
+        """CREATE TABLE IF NOT EXISTS modmail_threads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
@@ -346,10 +347,10 @@ async def init_db():
             closed_at TEXT DEFAULT '',
             closed_by INTEGER DEFAULT 0,
             last_message_at TEXT DEFAULT ''
-        );
+        )""",
 
-        -- Reaction roles
-        CREATE TABLE IF NOT EXISTS reaction_roles (
+        # Reaction roles
+        """CREATE TABLE IF NOT EXISTS reaction_roles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             message_id INTEGER NOT NULL,
@@ -363,10 +364,10 @@ async def init_db():
             cooldown INTEGER DEFAULT 0,
             created_at TEXT DEFAULT '',
             created_by INTEGER NOT NULL
-        );
+        )""",
 
-        -- User role tracking (for cooldowns)
-        CREATE TABLE IF NOT EXISTS reaction_role_history (
+        # User role tracking (for cooldowns)
+        """CREATE TABLE IF NOT EXISTS reaction_role_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
@@ -374,10 +375,10 @@ async def init_db():
             role_id INTEGER NOT NULL,
             given_at TEXT DEFAULT '',
             expires_at TEXT DEFAULT ''
-        );
+        )""",
 
-        -- Custom commands
-        CREATE TABLE IF NOT EXISTS custom_commands (
+        # Custom commands
+        """CREATE TABLE IF NOT EXISTS custom_commands (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             name TEXT NOT NULL,
@@ -387,49 +388,19 @@ async def init_db():
             cooldown INTEGER DEFAULT 0,
             required_role INTEGER DEFAULT 0,
             aliases TEXT DEFAULT '[]'
-        );
+        )""",
 
-        -- Rate tracker for antinuke rolling window
-        CREATE TABLE IF NOT EXISTS rate_tracker (
+        # Rate tracker for antinuke rolling window
+        """CREATE TABLE IF NOT EXISTS rate_tracker (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             action_type TEXT NOT NULL,
             timestamp TEXT DEFAULT ''
-        );
-        CREATE INDEX IF NOT EXISTS idx_rate_tracker_lookup
-            ON rate_tracker(guild_id, user_id, action_type, timestamp);
-        
-        -- Performance indexes for frequently queried columns
-        CREATE INDEX IF NOT EXISTS idx_action_log_guild_timestamp 
-            ON action_log(guild_id, timestamp);
-        CREATE INDEX IF NOT EXISTS idx_action_log_user 
-            ON action_log(user_id);
-        CREATE INDEX IF NOT EXISTS idx_warnings_guild_user 
-            ON warnings(guild_id, user_id);
-        CREATE INDEX IF NOT EXISTS idx_xp_guild_xp 
-            ON xp(guild_id, xp DESC);
-        CREATE INDEX IF NOT EXISTS idx_hardbans_guild 
-            ON hardbans(guild_id);
-        CREATE INDEX IF NOT EXISTS idx_bad_words_guild 
-            ON bad_words(guild_id);
-        CREATE INDEX IF NOT EXISTS idx_ignored_channels_guild_module
-            ON ignored_channels(guild_id, module);
-        CREATE INDEX IF NOT EXISTS idx_bot_whitelist_guild
-            ON bot_whitelist(guild_id);
-        CREATE INDEX IF NOT EXISTS idx_role_whitelist_guild
-            ON role_whitelist(guild_id);
-        CREATE INDEX IF NOT EXISTS idx_reaction_roles_guild_message
-            ON reaction_roles(guild_id, message_id);
-        CREATE INDEX IF NOT EXISTS idx_custom_commands_guild
-            ON custom_commands(guild_id);
-        CREATE INDEX IF NOT EXISTS idx_strikes_guild_user
-            ON strikes(guild_id, user_id);
-        CREATE INDEX IF NOT EXISTS idx_afk_guild_user
-            ON afk(guild_id, user_id);
+        )""",
 
-        -- Punished users (antinuke punishments)
-        CREATE TABLE IF NOT EXISTS punished_users (
+        # Punished users (antinuke punishments)
+        """CREATE TABLE IF NOT EXISTS punished_users (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             reason TEXT DEFAULT '',
@@ -437,85 +408,85 @@ async def init_db():
             punished_by INTEGER DEFAULT 0,
             punishment_type TEXT DEFAULT 'ban',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- Warnings
-        CREATE TABLE IF NOT EXISTS warnings (
+        # Warnings
+        """CREATE TABLE IF NOT EXISTS warnings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             reason TEXT DEFAULT '',
             warned_by INTEGER DEFAULT 0,
             timestamp TEXT DEFAULT ''
-        );
+        )""",
 
-        -- User Notes (private moderation notes)
-        CREATE TABLE IF NOT EXISTS notes (
+        # User Notes (private moderation notes)
+        """CREATE TABLE IF NOT EXISTS notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             note TEXT DEFAULT '',
             added_by INTEGER DEFAULT 0,
             timestamp TEXT DEFAULT ''
-        );
+        )""",
 
-        -- Strikes (escalating punishment system)
-        CREATE TABLE IF NOT EXISTS strikes (
+        # Strikes (escalating punishment system)
+        """CREATE TABLE IF NOT EXISTS strikes (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             strikes INTEGER DEFAULT 0,
             last_strike_at TEXT DEFAULT '',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- Strike Log (history of strikes)
-        CREATE TABLE IF NOT EXISTS strike_log (
+        # Strike Log (history of strikes)
+        """CREATE TABLE IF NOT EXISTS strike_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             reason TEXT DEFAULT '',
             added_by INTEGER DEFAULT 0,
             timestamp TEXT DEFAULT ''
-        );
+        )""",
 
-        -- Hardbans (auto-reban on rejoin)
-        CREATE TABLE IF NOT EXISTS hardbans (
+        # Hardbans (auto-reban on rejoin)
+        """CREATE TABLE IF NOT EXISTS hardbans (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             reason TEXT DEFAULT '',
             banned_by INTEGER DEFAULT 0,
             timestamp TEXT DEFAULT '',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- XP / Leveling
-        CREATE TABLE IF NOT EXISTS xp (
+        # XP / Leveling
+        """CREATE TABLE IF NOT EXISTS xp (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             xp INTEGER DEFAULT 0,
             level INTEGER DEFAULT 0,
             last_message TEXT DEFAULT '',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- Level roles (role rewards at levels)
-        CREATE TABLE IF NOT EXISTS level_roles (
+        # Level roles (role rewards at levels)
+        """CREATE TABLE IF NOT EXISTS level_roles (
             guild_id INTEGER NOT NULL,
             level INTEGER NOT NULL,
             role_id INTEGER NOT NULL,
             PRIMARY KEY (guild_id, level)
-        );
+        )""",
 
-        -- XP cooldown
-        CREATE TABLE IF NOT EXISTS xp_cooldown (
+        # XP cooldown
+        """CREATE TABLE IF NOT EXISTS xp_cooldown (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             last_xp TEXT DEFAULT '',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- AutoMod config per guild
-        CREATE TABLE IF NOT EXISTS automod_config (
+        # AutoMod config per guild
+        """CREATE TABLE IF NOT EXISTS automod_config (
             guild_id INTEGER PRIMARY KEY,
             anti_spam INTEGER DEFAULT 1,
             anti_invite INTEGER DEFAULT 1,
@@ -528,72 +499,72 @@ async def init_db():
             mention_limit INTEGER DEFAULT 5,
             caps_percent INTEGER DEFAULT 70,
             emoji_limit INTEGER DEFAULT 8
-        );
+        )""",
 
-        -- Bad words per guild
-        CREATE TABLE IF NOT EXISTS bad_words (
+        # Bad words per guild
+        """CREATE TABLE IF NOT EXISTS bad_words (
             guild_id INTEGER NOT NULL,
             word TEXT NOT NULL,
             PRIMARY KEY (guild_id, word)
-        );
+        )""",
 
-        -- Antinuke thresholds per guild per action
-        CREATE TABLE IF NOT EXISTS antinuke_thresholds (
+        # Antinuke thresholds per guild per action
+        """CREATE TABLE IF NOT EXISTS antinuke_thresholds (
             guild_id INTEGER NOT NULL,
             action_type TEXT NOT NULL,
             max_count INTEGER DEFAULT 3,
             window_seconds INTEGER DEFAULT 10,
             PRIMARY KEY (guild_id, action_type)
-        );
+        )""",
 
-        -- AFK
-        CREATE TABLE IF NOT EXISTS afk (
+        # AFK
+        """CREATE TABLE IF NOT EXISTS afk (
             guild_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             reason TEXT DEFAULT '',
             set_at TEXT DEFAULT '',
             PRIMARY KEY (guild_id, user_id)
-        );
+        )""",
 
-        -- Ignored channels for modules
-        CREATE TABLE IF NOT EXISTS ignored_channels (
+        # Ignored channels for modules
+        """CREATE TABLE IF NOT EXISTS ignored_channels (
             guild_id INTEGER NOT NULL,
             channel_id INTEGER NOT NULL,
             module TEXT DEFAULT 'all',
             PRIMARY KEY (guild_id, channel_id, module)
-        );
+        )""",
 
-        -- Bot whitelist (whitelisted bots that won't be punished)
-        CREATE TABLE IF NOT EXISTS bot_whitelist (
+        # Bot whitelist (whitelisted bots that won't be punished)
+        """CREATE TABLE IF NOT EXISTS bot_whitelist (
             guild_id INTEGER NOT NULL,
             bot_id INTEGER NOT NULL,
             added_by INTEGER DEFAULT 0,
             added_at TEXT DEFAULT '',
             reason TEXT DEFAULT '',
             PRIMARY KEY (guild_id, bot_id)
-        );
+        )""",
 
-        -- Role whitelist (whitelisted roles - members with these roles won't be punished)
-        CREATE TABLE IF NOT EXISTS role_whitelist (
+        # Role whitelist (whitelisted roles - members with these roles won't be punished)
+        """CREATE TABLE IF NOT EXISTS role_whitelist (
             guild_id INTEGER NOT NULL,
             role_id INTEGER NOT NULL,
             added_by INTEGER DEFAULT 0,
             added_at TEXT DEFAULT '',
             reason TEXT DEFAULT '',
             PRIMARY KEY (guild_id, role_id)
-        );
+        )""",
 
-        -- Backups metadata
-        CREATE TABLE IF NOT EXISTS backups (
+        # Backups metadata
+        """CREATE TABLE IF NOT EXISTS backups (
             backup_id TEXT PRIMARY KEY,
             guild_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             created_at TEXT DEFAULT '',
             FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
-        );
+        )""",
 
-        -- Backup roles
-        CREATE TABLE IF NOT EXISTS backup_roles (
+        # Backup roles
+        """CREATE TABLE IF NOT EXISTS backup_roles (
             backup_id TEXT NOT NULL,
             guild_id INTEGER NOT NULL,
             role_id INTEGER NOT NULL,
@@ -607,10 +578,10 @@ async def init_db():
             PRIMARY KEY (backup_id, role_id),
             FOREIGN KEY (backup_id) REFERENCES backups(backup_id) ON DELETE CASCADE,
             FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
-        );
+        )""",
 
-        -- Backup channels
-        CREATE TABLE IF NOT EXISTS backup_channels (
+        # Backup channels
+        """CREATE TABLE IF NOT EXISTS backup_channels (
             backup_id TEXT NOT NULL,
             guild_id INTEGER NOT NULL,
             channel_id INTEGER NOT NULL,
@@ -625,8 +596,41 @@ async def init_db():
             PRIMARY KEY (backup_id, channel_id),
             FOREIGN KEY (backup_id) REFERENCES backups(backup_id) ON DELETE CASCADE,
             FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
-        );
-    """)
+        )""",
+    ]
+
+    # Create each table individually for better error handling
+    for table_script in table_creation_scripts:
+        try:
+            await db.execute(table_script)
+        except Exception as e:
+            print(f"[ERROR] Failed to create table: {e}")
+            # Continue with other tables
+
+    # Create indexes separately
+    index_creation_scripts = [
+        "CREATE INDEX IF NOT EXISTS idx_rate_tracker_lookup ON rate_tracker(guild_id, user_id, action_type, timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_action_log_guild_timestamp ON action_log(guild_id, timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_action_log_user ON action_log(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_warnings_guild_user ON warnings(guild_id, user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_xp_guild_xp ON xp(guild_id, xp DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_hardbans_guild ON hardbans(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_bad_words_guild ON bad_words(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_ignored_channels_guild_module ON ignored_channels(guild_id, module)",
+        "CREATE INDEX IF NOT EXISTS idx_bot_whitelist_guild ON bot_whitelist(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_role_whitelist_guild ON role_whitelist(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_reaction_roles_guild_message ON reaction_roles(guild_id, message_id)",
+        "CREATE INDEX IF NOT EXISTS idx_custom_commands_guild ON custom_commands(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_strikes_guild_user ON strikes(guild_id, user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_afk_guild_user ON afk(guild_id, user_id)",
+    ]
+
+    for index_script in index_creation_scripts:
+        try:
+            await db.execute(index_script)
+        except Exception as e:
+            print(f"[WARN] Failed to create index: {e}")
+            # Continue with other indexes
 
     # Run migrations for existing database to add columns
     columns_to_add = [
@@ -673,6 +677,17 @@ async def init_db():
             pass
 
     await db.commit()
+    
+    # Verify critical tables exist
+    critical_tables = ["warnings", "guilds", "action_log", "xp", "cases", "whitelist", "hardbans"]
+    cursor = await db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    existing_tables = {row[0] for row in await cursor.fetchall()}
+    
+    missing_tables = [table for table in critical_tables if table not in existing_tables]
+    if missing_tables:
+        print(f"[ERROR] Critical tables missing after initialization: {missing_tables}")
+        raise Exception(f"Failed to create critical tables: {missing_tables}")
+    
     await db.close()
     
     # Run database migrations

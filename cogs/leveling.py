@@ -188,7 +188,8 @@ class Leveling(commands.Cog):
             lines = []
             for lr in roles:
                 r = interaction.guild.get_role(lr["role_id"])
-                lines.append(f"Level **{lr['level']}** → {r.mention if r else f'Unknown role `({lr['role_id']})`'}")
+                role_name = r.mention if r else f"Unknown role `({lr['role_id']})`"
+                lines.append(f"Level **{lr['level']}** → {role_name}")
             await interaction.response.send_message(
                 embed=info_embed("Level Roles", "\n".join(lines)), ephemeral=False
             )

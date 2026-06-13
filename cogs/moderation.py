@@ -43,12 +43,19 @@ class Moderation(commands.Cog):
             return await interaction.response.send_message(embed=error_embed("I cannot ban myself."), ephemeral=True)
 
         delete_days = max(0, min(7, delete_days))
-        await interaction.guild.ban(user, reason=f"{interaction.user}: {reason}", delete_message_days=delete_days)
-        await log_action(interaction.guild.id, "ban", user.id, {"reason": reason, "moderator": interaction.user.id})
-        await interaction.response.send_message(
-            embed=mod_action_embed("Ban", interaction.user, user, reason, 0xFF4444),
-            ephemeral=False,
-        )
+        try:
+            await interaction.guild.ban(user, reason=f"{interaction.user}: {reason}", delete_message_days=delete_days)
+            await log_action(interaction.guild.id, "ban", user.id, {"reason": reason, "moderator": interaction.user.id})
+            await interaction.response.send_message(
+                embed=mod_action_embed("Ban", interaction.user, user, reason, 0xFF4444),
+                ephemeral=False,
+            )
+        except discord.Forbidden:
+            return await interaction.response.send_message(embed=error_embed("I don't have permission to ban this user (higher role hierarchy)."), ephemeral=True)
+        except discord.HTTPException as e:
+            return await interaction.response.send_message(embed=error_embed(f"HTTP error: {e}"), ephemeral=True)
+        except Exception as e:
+            return await interaction.response.send_message(embed=error_embed(f"Failed to ban user: {e}"), ephemeral=True)
 
     # ── Unban ──
     @app_commands.command(name="unban", description="Unban a user by ID")
@@ -81,12 +88,19 @@ class Moderation(commands.Cog):
         if user.top_role >= interaction.user.top_role and interaction.user.id != OWNER_ID:
             return await interaction.response.send_message(embed=error_embed("You cannot kick this user."), ephemeral=True)
 
-        await user.kick(reason=f"{interaction.user}: {reason}")
-        await log_action(interaction.guild.id, "kick", user.id, {"reason": reason, "moderator": interaction.user.id})
-        await interaction.response.send_message(
-            embed=mod_action_embed("Kick", interaction.user, user, reason, 0xFFAA00),
-            ephemeral=False,
-        )
+        try:
+            await user.kick(reason=f"{interaction.user}: {reason}")
+            await log_action(interaction.guild.id, "kick", user.id, {"reason": reason, "moderator": interaction.user.id})
+            await interaction.response.send_message(
+                embed=mod_action_embed("Kick", interaction.user, user, reason, 0xFFAA00),
+                ephemeral=False,
+            )
+        except discord.Forbidden:
+            return await interaction.response.send_message(embed=error_embed("I don't have permission to kick this user."), ephemeral=True)
+        except discord.HTTPException as e:
+            return await interaction.response.send_message(embed=error_embed(f"HTTP error: {e}"), ephemeral=True)
+        except Exception as e:
+            return await interaction.response.send_message(embed=error_embed(f"Failed to kick user: {e}"), ephemeral=True)
 
     # ── Timeout ──
     @app_commands.command(name="timeout", description="Timeout a user")
@@ -108,12 +122,19 @@ class Moderation(commands.Cog):
             return await interaction.response.send_message(embed=error_embed(str(e)), ephemeral=True)
 
         until = datetime.now(timezone.utc) + timedelta(seconds=seconds)
-        await user.timeout(until, reason=f"{interaction.user}: {reason}")
-        await log_action(interaction.guild.id, "timeout", user.id, {"reason": reason, "duration": duration, "moderator": interaction.user.id})
-        await interaction.response.send_message(
-            embed=mod_action_embed("Timeout", interaction.user, user, f"{reason} ({duration})", 0xFFAA00),
-            ephemeral=False,
-        )
+        try:
+            await user.timeout(until, reason=f"{interaction.user}: {reason}")
+            await log_action(interaction.guild.id, "timeout", user.id, {"reason": reason, "duration": duration, "moderator": interaction.user.id})
+            await interaction.response.send_message(
+                embed=mod_action_embed("Timeout", interaction.user, user, f"{reason} ({duration})", 0xFFAA00),
+                ephemeral=False,
+            )
+        except discord.Forbidden:
+            return await interaction.response.send_message(embed=error_embed("I don't have permission to timeout this user."), ephemeral=True)
+        except discord.HTTPException as e:
+            return await interaction.response.send_message(embed=error_embed(f"HTTP error: {e}"), ephemeral=True)
+        except Exception as e:
+            return await interaction.response.send_message(embed=error_embed(f"Failed to timeout user: {e}"), ephemeral=True)
 
     # ── Untimeout ──
     @app_commands.command(name="untimeout", description="Remove timeout from a user")
@@ -186,11 +207,18 @@ class Moderation(commands.Cog):
 
         amount = max(1, min(100, amount))
         await interaction.response.defer(thinking=True, ephemeral=True)
-        deleted = await interaction.channel.purge(limit=amount)
-        await interaction.followup.send(
-            embed=success_embed("Purge", f"Deleted **{len(deleted)}** message(s)."),
-            ephemeral=True,
-        )
+        try:
+            deleted = await interaction.channel.purge(limit=amount)
+            await interaction.followup.send(
+                embed=success_embed("Purge", f"Deleted **{len(deleted)}** message(s)."),
+                ephemeral=True,
+            )
+        except discord.Forbidden:
+            return await interaction.followup.send(embed=error_embed("I don't have permission to delete messages."), ephemeral=True)
+        except discord.HTTPException as e:
+            return await interaction.followup.send(embed=error_embed(f"HTTP error: {e}"), ephemeral=True)
+        except Exception as e:
+            return await interaction.followup.send(embed=error_embed(f"Failed to purge messages: {e}"), ephemeral=True)
 
     # ── Purge User ──
     @app_commands.command(name="purgeuser", description="Delete messages from a specific user")
@@ -314,13 +342,20 @@ class Moderation(commands.Cog):
         if not interaction.user.guild_permissions.ban_members and interaction.user.id != OWNER_ID:
             return await interaction.response.send_message(embed=error_embed("Ban Members required."), ephemeral=True)
 
-        await add_hardban(interaction.guild.id, user.id, reason, interaction.user.id)
-        await interaction.guild.ban(user, reason=f"[Hardban] {interaction.user}: {reason}", delete_message_days=0)
-        await log_action(interaction.guild.id, "hardban", user.id, {"reason": reason, "moderator": interaction.user.id})
-        await interaction.response.send_message(
-            embed=mod_action_embed("Hardban", interaction.user, user, reason, 0xFF4444),
-            ephemeral=False,
-        )
+        try:
+            await add_hardban(interaction.guild.id, user.id, reason, interaction.user.id)
+            await interaction.guild.ban(user, reason=f"[Hardban] {interaction.user}: {reason}", delete_message_days=0)
+            await log_action(interaction.guild.id, "hardban", user.id, {"reason": reason, "moderator": interaction.user.id})
+            await interaction.response.send_message(
+                embed=mod_action_embed("Hardban", interaction.user, user, reason, 0xFF4444),
+                ephemeral=False,
+            )
+        except discord.Forbidden:
+            return await interaction.response.send_message(embed=error_embed("I don't have permission to ban this user."), ephemeral=True)
+        except discord.HTTPException as e:
+            return await interaction.response.send_message(embed=error_embed(f"HTTP error: {e}"), ephemeral=True)
+        except Exception as e:
+            return await interaction.response.send_message(embed=error_embed(f"Failed to hardban user: {e}"), ephemeral=True)
 
     @app_commands.command(name="unhardban", description="Remove a user from the hardban list")
     @app_commands.describe(user_id="User ID to unhardban")

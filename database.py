@@ -44,6 +44,149 @@ def with_retry(max_retries=3, backoff_factor=0.5):
         return wrapper
     return decorator
 
+
+# Lightweight retry decorator for read operations (minimal retry, faster backoff)
+def with_read_retry(max_retries=2, backoff_factor=0.1):
+    """Lightweight decorator for read operations with minimal retry logic for performance."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            try:
+                return await func(*args, **kwargs)
+            except aiosqlite.OperationalError as e:
+                if "database is locked" in str(e).lower() or "database is locked" in str(e):
+                    # Quick retry for read operations
+                    await asyncio.sleep(backoff_factor)
+                    try:
+                        return await func(*args, **kwargs)
+                    except aiosqlite.OperationalError:
+                        # Second retry with longer wait
+                        await asyncio.sleep(backoff_factor * 2)
+                        return await func(*args, **kwargs)
+                raise  # Re-raise if not lock error or retries exhausted
+            except Exception as e:
+                raise  # Re-raise other exceptions immediately
+        return wrapper
+    return decorator
+
+
+# Circuit breaker pattern for database operations
+class CircuitBreaker:
+    """Circuit breaker to prevent cascading failures when database is unavailable."""
+    
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
+        """
+        Initialize circuit breaker.
+        
+        Args:
+            failure_threshold: Number of consecutive failures before opening circuit
+            recovery_timeout: Seconds to wait before attempting recovery
+        """
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self._failure_count = 0
+        self._last_failure_time = None
+        self._state = "closed"  # closed, open, half-open
+        self._lock = asyncio.Lock()
+    
+    async def call(self, func, *args, **kwargs):
+        """Execute function with circuit breaker protection."""
+        async with self._lock:
+            if self._state == "open":
+                # Check if we should attempt recovery
+                if (datetime.now(timezone.utc) - self._last_failure_time).total_seconds() > self.recovery_timeout:
+                    self._state = "half-open"
+                else:
+                    raise Exception("Circuit breaker is OPEN - database unavailable")
+            
+            if self._state == "half-open":
+                # Allow one request through to test recovery
+                pass
+        
+        try:
+            result = await func(*args, **kwargs)
+            # Success - reset circuit breaker
+            async with self._lock:
+                self._failure_count = 0
+                self._state = "closed"
+            return result
+        except Exception as e:
+            async with self._lock:
+                self._failure_count += 1
+                self._last_failure_time = datetime.now(timezone.utc)
+                if self._failure_count >= self.failure_threshold:
+                    self._state = "open"
+            raise
+
+
+# Global circuit breaker for read operations
+_read_circuit_breaker = CircuitBreaker(failure_threshold=3, recovery_timeout=30)
+
+
+# Connection pool for database operations
+class ConnectionPool:
+    """Thread-safe connection pool for high-performance database access."""
+    
+    def __init__(self, pool_size: int = 10):
+        """
+        Initialize connection pool.
+        
+        Args:
+            pool_size: Number of connections in the pool
+        """
+        self.pool_size = pool_size
+        self._connections: List[aiosqlite.Connection] = []
+        self._available: asyncio.Queue = asyncio.Queue(maxsize=pool_size)
+        self._lock = asyncio.Lock()
+        self._initialized = False
+    
+    async def initialize(self):
+        """Initialize the connection pool."""
+        if self._initialized:
+            return
+        
+        async with self._lock:
+            if self._initialized:
+                return
+            
+            for _ in range(self.pool_size):
+                db = aiosqlite.connect(DB_PATH, check_same_thread=False)
+                await db.execute("PRAGMA journal_mode=WAL")
+                await db.execute("PRAGMA synchronous=NORMAL")
+                await db.commit()
+                self._connections.append(db)
+                await self._available.put(db)
+            
+            self._initialized = True
+    
+    async def acquire(self) -> aiosqlite.Connection:
+        """Acquire a connection from the pool."""
+        await self.initialize()
+        return await self._available.get()
+    
+    async def release(self, db: aiosqlite.Connection):
+        """Release a connection back to the pool."""
+        await self._available.put(db)
+    
+    async def close_all(self):
+        """Close all connections in the pool."""
+        async with self._lock:
+            for db in self._connections:
+                await db.close()
+            self._connections.clear()
+            self._initialized = False
+
+
+# Global connection pool
+_connection_pool: ConnectionPool = None
+
+def get_connection_pool() -> ConnectionPool:
+    """Get the global connection pool."""
+    global _connection_pool
+    if _connection_pool is None:
+        _connection_pool = ConnectionPool(pool_size=10)
+    return _connection_pool
+
 # Cache layer import (will be initialized later)
 _cache_layer = None
 
@@ -758,6 +901,7 @@ async def init_db():
         logging.error(f"Migration error: {e}")
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def purge_old_data():
     """Remove action_log and rate_tracker entries older than 30 days."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
@@ -769,6 +913,8 @@ async def purge_old_data():
 
 
 # ── Guild Settings ──
+# Note: get_guild_fast() is now the preferred function for antinuke (no retry)
+# This version keeps retry for non-critical paths, but consider using get_guild_fast()
 @with_retry(max_retries=5, backoff_factor=0.3)
 async def get_guild(guild_id: int) -> Dict[str, Any]:
     # Try cache first
@@ -822,6 +968,7 @@ async def update_guild(guild_id: int, **kwargs):
 
 
 # ── Whitelist ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_whitelist(guild_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     rows = await db.execute(
@@ -832,6 +979,7 @@ async def get_whitelist(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_whitelist_entry(guild_id: int, user_id: int) -> Optional[Dict[str, Any]]:
     # Try cache first
     if _cache_layer:
@@ -855,6 +1003,7 @@ async def get_whitelist_entry(guild_id: int, user_id: int) -> Optional[Dict[str,
     return result
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_whitelist(guild_id: int, user_id: int, trust_level: int, added_by: int):
     db = await _get_db()
     await db.execute(
@@ -871,6 +1020,7 @@ async def add_whitelist(guild_id: int, user_id: int, trust_level: int, added_by:
         await _cache_layer.delete("whitelist_entry", guild_id, user_id)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_whitelist(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -886,6 +1036,7 @@ async def remove_whitelist(guild_id: int, user_id: int):
 
 
 # ── Bot Whitelist ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_bot_whitelist(guild_id: int, bot_id: int, added_by: int, reason: str = ""):
     db = await _get_db()
     await db.execute(
@@ -898,6 +1049,7 @@ async def add_bot_whitelist(guild_id: int, bot_id: int, added_by: int, reason: s
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_bot_whitelist(guild_id: int, bot_id: int):
     db = await _get_db()
     await db.execute(
@@ -908,6 +1060,7 @@ async def remove_bot_whitelist(guild_id: int, bot_id: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_bot_whitelist(guild_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     cursor = await db.execute(
@@ -919,6 +1072,7 @@ async def get_bot_whitelist(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def is_bot_whitelisted(guild_id: int, bot_id: int) -> bool:
     db = await _get_db()
     cursor = await db.execute(
@@ -931,6 +1085,7 @@ async def is_bot_whitelisted(guild_id: int, bot_id: int) -> bool:
 
 
 # ── Role Whitelist ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_role_whitelist(guild_id: int, role_id: int, added_by: int, reason: str = ""):
     db = await _get_db()
     await db.execute(
@@ -943,6 +1098,7 @@ async def add_role_whitelist(guild_id: int, role_id: int, added_by: int, reason:
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_role_whitelist(guild_id: int, role_id: int):
     db = await _get_db()
     await db.execute(
@@ -953,6 +1109,7 @@ async def remove_role_whitelist(guild_id: int, role_id: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_role_whitelist(guild_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     cursor = await db.execute(
@@ -964,6 +1121,7 @@ async def get_role_whitelist(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def is_role_whitelisted(guild_id: int, role_id: int) -> bool:
     db = await _get_db()
     cursor = await db.execute(
@@ -975,6 +1133,7 @@ async def is_role_whitelisted(guild_id: int, role_id: int) -> bool:
     return row is not None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def user_has_whitelisted_role(guild_id: int, user_id: int, user_roles) -> bool:
     """Check if user has any whitelisted roles using optimized SQL query."""
     if not user_roles:
@@ -997,6 +1156,7 @@ async def user_has_whitelisted_role(guild_id: int, user_id: int, user_roles) -> 
     return count[0] > 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def is_user_whitelisted_optimized(guild_id: int, user_id: int, is_bot: bool = False) -> bool:
     """
     Optimized single-query whitelist check combining all whitelist types.
@@ -1034,6 +1194,7 @@ async def is_user_whitelisted_optimized(guild_id: int, user_id: int, is_bot: boo
 
 
 # ── User Notes ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_user_note(guild_id: int, user_id: int, note: str, added_by: int):
     db = await _get_db()
     await db.execute(
@@ -1044,6 +1205,7 @@ async def add_user_note(guild_id: int, user_id: int, note: str, added_by: int):
     await _release_db(db)
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_user_notes(guild_id: int, user_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     cursor = await db.execute(
@@ -1055,6 +1217,7 @@ async def get_user_notes(guild_id: int, user_id: int) -> List[Dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def delete_user_note(guild_id: int, note_id: int):
     db = await _get_db()
     await db.execute(
@@ -1066,6 +1229,7 @@ async def delete_user_note(guild_id: int, note_id: int):
 
 
 # ── User Strikes ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_user_strike(guild_id: int, user_id: int, reason: str, added_by: int):
     db = await _get_db()
     # First, check if user has strikes, increment if exists
@@ -1098,6 +1262,7 @@ async def add_user_strike(guild_id: int, user_id: int, reason: str, added_by: in
     await _release_db(db2)
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_user_strikes(guild_id: int, user_id: int) -> Dict[str, Any]:
     db = await _get_db()
     cursor = await db.execute(
@@ -1109,6 +1274,7 @@ async def get_user_strikes(guild_id: int, user_id: int) -> Dict[str, Any]:
     return dict(row) if row else {"strikes": 0, "last_strike_at": ""}
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_user_strike_log(guild_id: int, user_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     cursor = await db.execute(
@@ -1120,6 +1286,7 @@ async def get_user_strike_log(guild_id: int, user_id: int) -> List[Dict[str, Any
     return [dict(row) for row in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def clear_user_strikes(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1130,6 +1297,7 @@ async def clear_user_strikes(guild_id: int, user_id: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_user_strike(guild_id: int, user_id: int):
     db = await _get_db()
     cursor = await db.execute(
@@ -1154,6 +1322,7 @@ async def remove_user_strike(guild_id: int, user_id: int):
 
 
 # ── Rate Tracker (rolling window) ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_rate_event(guild_id: int, user_id: int, action_type: str):
     db = await _get_db()
     await db.execute(
@@ -1164,6 +1333,7 @@ async def add_rate_event(guild_id: int, user_id: int, action_type: str):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def count_rate_events(guild_id: int, user_id: int, action_type: str, window_seconds: int) -> int:
     cutoff = (datetime.now(timezone.utc) - timedelta(seconds=window_seconds)).isoformat()
     db = await _get_db()
@@ -1177,6 +1347,7 @@ async def count_rate_events(guild_id: int, user_id: int, action_type: str, windo
     return row["cnt"] if row else 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def clear_rate_events(guild_id: int, user_id: int, action_type: str):
     db = await _get_db()
     await db.execute(
@@ -1214,6 +1385,7 @@ async def remove_punished_user(guild_id: int, user_id: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_punished_users(guild_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     rows = await db.execute(
@@ -1224,6 +1396,7 @@ async def get_punished_users(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def is_punished(guild_id: int, user_id: int) -> bool:
     db = await _get_db()
     row = await db.execute(
@@ -1236,6 +1409,7 @@ async def is_punished(guild_id: int, user_id: int) -> bool:
 
 
 # ── Warnings ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_warning(guild_id: int, user_id: int, reason: str, warned_by: int) -> int:
     db = await _get_db()
     cursor = await db.execute(
@@ -1249,6 +1423,7 @@ async def add_warning(guild_id: int, user_id: int, reason: str, warned_by: int) 
     return warn_id
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_warnings(guild_id: int, user_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     rows = await db.execute(
@@ -1260,6 +1435,7 @@ async def get_warnings(guild_id: int, user_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def clear_warnings(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1270,6 +1446,7 @@ async def clear_warnings(guild_id: int, user_id: int):
     await _release_db(db)
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_warning_by_id(warn_id: int) -> Optional[Dict[str, Any]]:
     db = await _get_db()
     row = await db.execute(
@@ -1281,6 +1458,7 @@ async def get_warning_by_id(warn_id: int) -> Optional[Dict[str, Any]]:
 
 
 # ── Hardbans ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_hardban(guild_id: int, user_id: int, reason: str, banned_by: int):
     db = await _get_db()
     await db.execute(
@@ -1293,6 +1471,7 @@ async def add_hardban(guild_id: int, user_id: int, reason: str, banned_by: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_hardban(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1303,6 +1482,7 @@ async def remove_hardban(guild_id: int, user_id: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def is_hardbanned(guild_id: int, user_id: int) -> bool:
     db = await _get_db()
     row = await db.execute(
@@ -1315,6 +1495,7 @@ async def is_hardbanned(guild_id: int, user_id: int) -> bool:
 
 
 # ── Role / Channel Cache ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def cache_role(guild_id: int, role):
     """Cache a single role."""
     db = await _get_db()
@@ -1339,6 +1520,7 @@ async def cache_role(guild_id: int, role):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def cache_channel(guild_id: int, channel):
     """Cache a single channel."""
     db = await _get_db()
@@ -1364,6 +1546,7 @@ async def cache_channel(guild_id: int, channel):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_cached_roles(guild_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     rows = await db.execute(
@@ -1374,6 +1557,7 @@ async def get_cached_roles(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_cached_channels(guild_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     rows = await db.execute(
@@ -1384,6 +1568,7 @@ async def get_cached_channels(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def delete_cached_role(guild_id: int, role_id: int):
     db = await _get_db()
     await db.execute(
@@ -1394,6 +1579,7 @@ async def delete_cached_role(guild_id: int, role_id: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def delete_cached_channel(guild_id: int, channel_id: int):
     db = await _get_db()
     await db.execute(
@@ -1426,6 +1612,7 @@ async def create_snapshot(guild_id: int, data: Dict[str, Any]) -> int:
     return snapshot_id.lastrowid
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_snapshots(guild_id: int) -> List[Dict[str, Any]]:
     """Get all snapshots for a guild."""
     db = await _get_db()
@@ -1438,6 +1625,7 @@ async def get_snapshots(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_latest_snapshot(guild_id: int) -> Optional[Dict[str, Any]]:
     """Get the most recent snapshot for a guild."""
     db = await _get_db()
@@ -1452,6 +1640,7 @@ async def get_latest_snapshot(guild_id: int) -> Optional[Dict[str, Any]]:
     return None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def delete_snapshot(snapshot_id: int) -> bool:
     """Delete a specific snapshot by ID."""
     db = await _get_db()
@@ -1465,6 +1654,7 @@ async def delete_snapshot(snapshot_id: int) -> bool:
 
 
 # Sent announcement tracking functions
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def mark_announcement_sent(guild_id: int, announcement_id: int) -> bool:
     """Mark an announcement as sent to a guild."""
     db = await _get_db()
@@ -1483,6 +1673,7 @@ async def mark_announcement_sent(guild_id: int, announcement_id: int) -> bool:
         return False
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def is_announcement_sent(guild_id: int, announcement_id: int) -> bool:
     """Check if an announcement has been sent to a guild."""
     db = await _get_db()
@@ -1495,6 +1686,7 @@ async def is_announcement_sent(guild_id: int, announcement_id: int) -> bool:
     return len(rows) > 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_unsent_announcements(guild_id: int, all_announcements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Get announcements that haven't been sent to a guild."""
     unsent = []
@@ -1506,6 +1698,7 @@ async def get_unsent_announcements(guild_id: int, all_announcements: List[Dict[s
 
 
 # ── XP / Leveling ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_xp(guild_id: int, user_id: int) -> Dict[str, Any]:
     db = await _get_db()
     row = await db.execute(
@@ -1528,6 +1721,7 @@ async def get_xp(guild_id: int, user_id: int) -> Dict[str, Any]:
     return dict(row) if row else {"xp": 0, "level": 0}
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_xp(guild_id: int, user_id: int, amount: int) -> Tuple[int, int]:
     """Add XP, return (new_level, did_level_up)."""
     db = await _get_db()
@@ -1563,6 +1757,7 @@ async def add_xp(guild_id: int, user_id: int, amount: int) -> Tuple[int, int]:
     return new_level, new_level > old_level
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def set_xp_level(guild_id: int, user_id: int, level: int):
     xp_needed = int((level / 0.1) ** 2)
     db = await _get_db()
@@ -1576,6 +1771,7 @@ async def set_xp_level(guild_id: int, user_id: int, level: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def reset_xp(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1586,6 +1782,7 @@ async def reset_xp(guild_id: int, user_id: int):
     await _release_db(db)
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_leaderboard(guild_id: int, limit: int = 10) -> List[Dict[str, Any]]:
     db = await _get_db()
     rows = await db.execute(
@@ -1598,6 +1795,7 @@ async def get_leaderboard(guild_id: int, limit: int = 10) -> List[Dict[str, Any]
 
 
 # ── XP Cooldown ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_xp_cooldown(guild_id: int, user_id: int) -> Optional[str]:
     db = await _get_db()
     row = await db.execute(
@@ -1609,6 +1807,7 @@ async def get_xp_cooldown(guild_id: int, user_id: int) -> Optional[str]:
     return row["last_xp"] if row else None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def set_xp_cooldown(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1622,6 +1821,7 @@ async def set_xp_cooldown(guild_id: int, user_id: int):
 
 
 # ── Level Roles ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_level_roles(guild_id: int) -> List[Dict[str, Any]]:
     db = await _get_db()
     rows = await db.execute(
@@ -1633,6 +1833,7 @@ async def get_level_roles(guild_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_level_role(guild_id: int, level: int, role_id: int):
     db = await _get_db()
     await db.execute(
@@ -1645,6 +1846,7 @@ async def add_level_role(guild_id: int, level: int, role_id: int):
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_level_role(guild_id: int, level: int):
     db = await _get_db()
     await db.execute(
@@ -1656,6 +1858,7 @@ async def remove_level_role(guild_id: int, level: int):
 
 
 # ── AutoMod ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_automod_config(guild_id: int) -> Dict[str, Any]:
     # Try cache first
     if _cache_layer:
@@ -1692,6 +1895,7 @@ async def get_automod_config(guild_id: int) -> Dict[str, Any]:
     return result
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def update_automod_config(guild_id: int, **kwargs):
     # Security: Validate column names to prevent SQL injection
     if not _validate_column_names(set(kwargs.keys()), AUTOMOD_ALLOWED_COLUMNS):
@@ -1712,6 +1916,7 @@ async def update_automod_config(guild_id: int, **kwargs):
 
 
 # ── Bad Words ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_bad_words(guild_id: int) -> List[str]:
     # Try cache first
     if _cache_layer:
@@ -1734,6 +1939,7 @@ async def get_bad_words(guild_id: int) -> List[str]:
     return result
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_bad_word(guild_id: int, word: str):
     db = await _get_db()
     await db.execute(
@@ -1748,6 +1954,7 @@ async def add_bad_word(guild_id: int, word: str):
         await _cache_layer.delete("bad_words", guild_id)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_bad_word(guild_id: int, word: str):
     db = await _get_db()
     await db.execute(
@@ -1763,6 +1970,7 @@ async def remove_bad_word(guild_id: int, word: str):
 
 
 # ── Antinuke Thresholds ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_antinuke_threshold(guild_id: int, action_type: str) -> Tuple[int, int]:
     from config import DEFAULT_ANTINUKE_THRESHOLDS
     
@@ -1793,6 +2001,7 @@ async def get_antinuke_threshold(guild_id: int, action_type: str) -> Tuple[int, 
     return result
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def set_antinuke_threshold(guild_id: int, action_type: str, max_count: int, window_seconds: int):
     db = await _get_db()
     await db.execute(
@@ -1811,6 +2020,7 @@ async def set_antinuke_threshold(guild_id: int, action_type: str, max_count: int
 
 
 # ── AFK ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def set_afk(guild_id: int, user_id: int, reason: str):
     db = await _get_db()
     await db.execute(
@@ -1822,6 +2032,7 @@ async def set_afk(guild_id: int, user_id: int, reason: str):
     await _release_db(db)
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_afk(guild_id: int, user_id: int) -> Optional[Dict[str, Any]]:
     db = await _get_db()
     row = await db.execute(
@@ -1833,6 +2044,7 @@ async def get_afk(guild_id: int, user_id: int) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_afk(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1844,6 +2056,7 @@ async def remove_afk(guild_id: int, user_id: int):
 
 
 # ── Ignored Channels ──
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_ignored_channels(guild_id: int, module: str = "all") -> List[int]:
     # Try cache first
     cache_key = f"{guild_id}:{module}"
@@ -1869,6 +2082,7 @@ async def get_ignored_channels(guild_id: int, module: str = "all") -> List[int]:
     return result
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_ignored_channel(guild_id: int, channel_id: int, module: str = "all"):
     db = await _get_db()
     await db.execute(
@@ -1883,6 +2097,7 @@ async def add_ignored_channel(guild_id: int, channel_id: int, module: str = "all
         await _cache_layer.clear_pattern(f"ignored_channels:{guild_id}:")
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_ignored_channel(guild_id: int, channel_id: int, module: str = "all"):
     db = await _get_db()
     await db.execute(
@@ -1910,6 +2125,7 @@ async def log_action(guild_id: int, action_type: str, user_id: int = 0, details:
     await _release_db(db)
 
 
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_recent_logs(guild_id: int, limit: int = 10) -> List[Dict[str, Any]]:
     """Get recent action logs for a guild."""
     db = await _get_db()
@@ -1936,6 +2152,7 @@ async def get_recent_logs(guild_id: int, limit: int = 10) -> List[Dict[str, Any]
 
 
 # ── Automod Strikes ──
+@with_read_retry(max_retries=2, backoff_factor=0.1)
 async def get_strikes(guild_id: int, user_id: int) -> int:
     db = await _get_db()
     row = await db.execute(
@@ -1947,6 +2164,7 @@ async def get_strikes(guild_id: int, user_id: int) -> int:
     return row["strikes"] if row else 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_strike(guild_id: int, user_id: int) -> int:
     new_strikes = await get_strikes(guild_id, user_id) + 1
     db = await _get_db()
@@ -1961,6 +2179,7 @@ async def add_strike(guild_id: int, user_id: int) -> int:
     return new_strikes
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def clear_strikes(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1972,6 +2191,7 @@ async def clear_strikes(guild_id: int, user_id: int):
 
 
 # ── Raid Log ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def log_raid_start(guild_id: int, joins_detected: int, lockdown_triggered: int) -> int:
     db = await _get_db()
     cursor = await db.execute(
@@ -1985,6 +2205,7 @@ async def log_raid_start(guild_id: int, joins_detected: int, lockdown_triggered:
     return raid_id
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def log_raid_end(raid_id: int, resolved: int):
     db = await _get_db()
     await db.execute(
@@ -1996,6 +2217,7 @@ async def log_raid_end(raid_id: int, resolved: int):
 
 
 # ── Backups ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def save_backup(guild_id: int, backup_id: str, name: str, roles: list, channels: list):
     # Use a fresh connection for backup operations to avoid WAL snapshot issues
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -2057,6 +2279,7 @@ async def save_backup(guild_id: int, backup_id: str, name: str, roles: list, cha
         await db.close()
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_backups(guild_id: int) -> list:
     db = await _get_db()
     rows = await db.execute("SELECT * FROM backups WHERE guild_id = ? ORDER BY created_at DESC", (guild_id,))
@@ -2065,6 +2288,7 @@ async def get_backups(guild_id: int) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_backup(guild_id: int, backup_id: str) -> dict | None:
     db = await _get_db()
     row = await db.execute("SELECT * FROM backups WHERE guild_id = ? AND backup_id = ?", (guild_id, backup_id))
@@ -2074,6 +2298,7 @@ async def get_backup(guild_id: int, backup_id: str) -> dict | None:
 
 
 # ── Case Management ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def create_case(guild_id: int, user_id: int, moderator_id: int, action_type: str, 
                      reason: str = "", evidence: dict = None) -> int:
     """Create a new moderation case and return case number."""
@@ -2099,6 +2324,7 @@ async def create_case(guild_id: int, user_id: int, moderator_id: int, action_typ
     return case_number
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_case(guild_id: int, case_number: int) -> dict | None:
     """Get a specific case by case number."""
     db = await _get_db()
@@ -2111,6 +2337,7 @@ async def get_case(guild_id: int, case_number: int) -> dict | None:
     return dict(row) if row else None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_user_cases(guild_id: int, user_id: int, limit: int = 10) -> list:
     """Get cases for a specific user."""
     db = await _get_db()
@@ -2123,6 +2350,7 @@ async def get_user_cases(guild_id: int, user_id: int, limit: int = 10) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_all_cases(guild_id: int, limit: int = 20) -> list:
     """Get all cases for a guild."""
     db = await _get_db()
@@ -2135,6 +2363,7 @@ async def get_all_cases(guild_id: int, limit: int = 20) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def resolve_case(guild_id: int, case_number: int, resolved_by: int, resolved_reason: str = ""):
     """Mark a case as resolved."""
     db = await _get_db()
@@ -2147,6 +2376,7 @@ async def resolve_case(guild_id: int, case_number: int, resolved_by: int, resolv
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def update_case_evidence(guild_id: int, case_number: int, evidence: dict):
     """Update case evidence."""
     db = await _get_db()
@@ -2159,6 +2389,7 @@ async def update_case_evidence(guild_id: int, case_number: int, evidence: dict):
 
 
 # ── Modmail System ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def create_modmail_thread(guild_id: int, user_id: int, channel_id: int) -> int:
     """Create a new modmail thread."""
     db = await _get_db()
@@ -2187,6 +2418,7 @@ async def create_modmail_thread(guild_id: int, user_id: int, channel_id: int) ->
     return thread_id
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_modmail_thread(guild_id: int, user_id: int) -> dict | None:
     """Get an open modmail thread for a user."""
     db = await _get_db()
@@ -2199,6 +2431,7 @@ async def get_modmail_thread(guild_id: int, user_id: int) -> dict | None:
     return dict(row) if row else None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_open_modmail_threads(guild_id: int) -> list:
     """Get all open modmail threads for a guild."""
     db = await _get_db()
@@ -2211,6 +2444,7 @@ async def get_open_modmail_threads(guild_id: int) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def close_modmail_thread(guild_id: int, user_id: int, closed_by: int) -> bool:
     """Close a modmail thread."""
     db = await _get_db()
@@ -2226,6 +2460,7 @@ async def close_modmail_thread(guild_id: int, user_id: int, closed_by: int) -> b
     return result.rowcount > 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def update_modmail_activity(guild_id: int, user_id: int):
     """Update the last message time for a modmail thread."""
     db = await _get_db()
@@ -2238,6 +2473,7 @@ async def update_modmail_activity(guild_id: int, user_id: int):
 
 
 # ── Reaction Role System ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def create_reaction_role(guild_id: int, message_id: int, emoji: str, role_id: int, 
                            created_by: int, is_button: int = 0, button_label: str = "", button_style: str = "PRIMARY",
                            required_role: int = 0, blacklist_role: int = 0, cooldown: int = 0) -> int:
@@ -2263,6 +2499,7 @@ async def create_reaction_role(guild_id: int, message_id: int, emoji: str, role_
     return reaction_role_id
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_reaction_roles(guild_id: int, message_id: int) -> list:
     """Get all reaction roles for a message."""
     db = await _get_db()
@@ -2275,6 +2512,7 @@ async def get_reaction_roles(guild_id: int, message_id: int) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_reaction_role(guild_id: int, reaction_role_id: int) -> bool:
     """Remove a reaction role."""
     db = await _get_db()
@@ -2287,6 +2525,7 @@ async def remove_reaction_role(guild_id: int, reaction_role_id: int) -> bool:
     return result.rowcount > 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_user_reaction_role_history(guild_id: int, user_id: int, role_message_id: int, role_id: int) -> dict | None:
     """Check if user has cooldown for a reaction role."""
     db = await _get_db()
@@ -2303,6 +2542,7 @@ async def get_user_reaction_role_history(guild_id: int, user_id: int, role_messa
     return dict(row) if row else None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_reaction_role_history(guild_id: int, user_id: int, role_message_id: int, role_id: int, cooldown_seconds: int = 0):
     """Add reaction role history entry."""
     db = await _get_db()
@@ -2322,6 +2562,7 @@ async def add_reaction_role_history(guild_id: int, user_id: int, role_message_id
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def cleanup_reaction_role_history():
     """Clean up expired reaction role history entries."""
     db = await _get_db()
@@ -2335,6 +2576,7 @@ async def cleanup_reaction_role_history():
 
 
 # ── Custom Commands System ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def create_custom_command(guild_id: int, name: str, response: str, created_by: int, 
                               cooldown: int = 0, required_role: int = 0, aliases: list = None) -> int:
     """Create a custom command."""
@@ -2354,6 +2596,7 @@ async def create_custom_command(guild_id: int, name: str, response: str, created
     return cmd_id
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_custom_command(guild_id: int, name: str) -> dict | None:
     """Get a custom command by name."""
     db = await _get_db()
@@ -2366,6 +2609,7 @@ async def get_custom_command(guild_id: int, name: str) -> dict | None:
     return dict(row) if row else None
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_all_custom_commands(guild_id: int) -> list:
     """Get all custom commands for a guild."""
     db = await _get_db()
@@ -2378,6 +2622,7 @@ async def get_all_custom_commands(guild_id: int) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def delete_custom_command(guild_id: int, command_name: str) -> bool:
     """Delete a custom command."""
     db = await _get_db()
@@ -2390,6 +2635,7 @@ async def delete_custom_command(guild_id: int, command_name: str) -> bool:
     return result.rowcount > 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def update_custom_command(guild_id: int, name: str, response: str = None, cooldown: int = None) -> bool:
     """Update a custom command."""
     db = await _get_db()
@@ -2419,6 +2665,7 @@ async def update_custom_command(guild_id: int, name: str, response: str = None, 
     return result.rowcount > 0
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_backup_roles(backup_id: str) -> list:
     db = await _get_db()
     rows = await db.execute("SELECT * FROM backup_roles WHERE backup_id = ? ORDER BY position ASC", (backup_id,))
@@ -2427,6 +2674,7 @@ async def get_backup_roles(backup_id: str) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_backup_channels(backup_id: str) -> list:
     db = await _get_db()
     rows = await db.execute("SELECT * FROM backup_channels WHERE backup_id = ? ORDER BY position ASC", (backup_id,))
@@ -2435,6 +2683,7 @@ async def get_backup_channels(backup_id: str) -> list:
     return [dict(r) for r in rows]
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def delete_backup(guild_id: int, backup_id: str):
     db = await _get_db()
     await db.execute("DELETE FROM backups WHERE guild_id = ? AND backup_id = ?", (guild_id, backup_id))
@@ -2442,6 +2691,246 @@ async def delete_backup(guild_id: int, backup_id: str):
     await db.execute("DELETE FROM backup_channels WHERE backup_id = ?", (backup_id,))
     await db.commit()
     await _release_db(db)
+
+
+# ── Fast-Path Functions for Antinuke (No Retry, Cache-First) ──
+# These functions are optimized for antinuke performance and avoid retry delays
+
+# In-memory cache for antinuke fast-path data
+_antinuke_cache = {
+    "guild_settings": {},  # guild_id -> (settings_dict, timestamp)
+    "whitelist_users": {},  # guild_id -> set(user_ids)
+    "whitelist_roles": {},  # guild_id -> set(role_ids)
+    "antinuke_thresholds": {},  # (guild_id, action_type) -> (max_count, window)
+}
+
+_CACHE_TTL = {
+    "guild_settings": 180,  # 3 minutes for guild settings (increased for performance)
+    "whitelist_users": 300,  # 5 minutes for whitelist users (increased for performance)
+    "whitelist_roles": 300,  # 5 minutes for whitelist roles (increased for performance)
+    "antinuke_thresholds": 600,  # 10 minutes for thresholds (rarely change, very aggressive)
+}
+
+
+def _is_cache_valid(cache_type: str, cache_key: any, timestamp: float) -> bool:
+    """Check if cache entry is still valid."""
+    import time
+    ttl = _CACHE_TTL.get(cache_type, 60)
+    return (time.time() - timestamp) < ttl
+
+
+async def get_guild_fast(guild_id: int) -> Dict[str, Any]:
+    """Fast-path guild settings fetch with aggressive caching (no retry)."""
+    import time
+    
+    # Check cache first
+    cache_entry = _antinuke_cache["guild_settings"].get(guild_id)
+    if cache_entry and _is_cache_valid("guild_settings", guild_id, cache_entry[1]):
+        return cache_entry[0]
+    
+    # Cache miss - try to fetch from database (no retry)
+    try:
+        db = await _get_db()
+        row = await db.execute("SELECT * FROM guilds WHERE guild_id = ?", (guild_id,))
+        row = await row.fetchone()
+        await _release_db(db)
+        
+        if row:
+            result = dict(row)
+            # Cache the result
+            _antinuke_cache["guild_settings"][guild_id] = (result, time.time())
+            return result
+        else:
+            # Return default settings if guild not found
+            from config import DEFAULT_ANTINUKE_THRESHOLDS
+            defaults = {
+                "guild_id": guild_id,
+                "antinuke_enabled": 1,
+                "antinuke_sensitivity_level": 5,
+                "antinuke_safe_admins": "[]",
+                "punishment": "ban"
+            }
+            _antinuke_cache["guild_settings"][guild_id] = (defaults, time.time())
+            return defaults
+    except Exception:
+        # On any error, return default settings (graceful degradation)
+        from config import DEFAULT_ANTINUKE_THRESHOLDS
+        return {
+            "guild_id": guild_id,
+            "antinuke_enabled": 1,
+            "antinuke_sensitivity_level": 5,
+            "antinuke_safe_admins": "[]",
+            "punishment": "ban"
+        }
+
+
+async def is_user_whitelisted_fast(guild_id: int, user_id: int, is_bot: bool = False) -> bool:
+    """Fast-path whitelist check using in-memory cache (no retry)."""
+    import time
+    
+    # Check bot whitelist first (cached)
+    if is_bot:
+        cache_key = (guild_id, user_id)
+        cache_entry = _antinuke_cache["whitelist_users"].get(f"bot_{cache_key}")
+        if cache_entry is not None and _is_cache_valid("whitelist_users", cache_key, cache_entry):
+            return cache_entry[1]
+        
+        try:
+            db = await _get_db()
+            row = await db.execute(
+                "SELECT 1 FROM bot_whitelist WHERE guild_id = ? AND bot_id = ?",
+                (guild_id, user_id)
+            )
+            is_whitelisted = row.fetchone() is not None
+            await _release_db(db)
+            
+            # Cache result
+            _antinuke_cache["whitelist_users"][f"bot_{cache_key}"] = (is_whitelisted, time.time())
+            return is_whitelisted
+        except Exception:
+            return False
+    
+    # Check regular user whitelist (cached)
+    cache_key = (guild_id, user_id)
+    cache_entry = _antinuke_cache["whitelist_users"].get(f"user_{cache_key}")
+    if cache_entry is not None and _is_cache_valid("whitelist_users", cache_key, cache_entry):
+        return cache_entry[1]
+    
+    try:
+        db = await _get_db()
+        row = await db.execute(
+            "SELECT 1 FROM whitelist WHERE guild_id = ? AND user_id = ?",
+            (guild_id, user_id)
+        )
+        is_whitelisted = row.fetchone() is not None
+        await _release_db(db)
+        
+        # Cache result
+        _antinuke_cache["whitelist_users"][f"user_{cache_key}"] = (is_whitelisted, time.time())
+        return is_whitelisted
+    except Exception:
+        return False
+
+
+async def user_has_whitelisted_role_fast(guild_id: int, user_role_ids: set) -> bool:
+    """Fast-path role whitelist check using in-memory cache (no retry)."""
+    import time
+    
+    if not user_role_ids:
+        return False
+    
+    # Cache key based on guild and role IDs
+    cache_key = (guild_id, tuple(sorted(user_role_ids)))
+    cache_entry = _antinuke_cache["whitelist_roles"].get(str(cache_key))
+    if cache_entry is not None and _is_cache_valid("whitelist_roles", cache_key, cache_entry):
+        return cache_entry[1]
+    
+    try:
+        db = await _get_db()
+        placeholders = ','.join('?' * len(user_role_ids))
+        cursor = await db.execute(
+            f"SELECT COUNT(*) FROM role_whitelist WHERE guild_id = ? AND role_id IN ({placeholders})",
+            [guild_id] + list(user_role_ids)
+        )
+        count = await cursor.fetchone()
+        await _release_db(db)
+        
+        has_whitelisted_role = count[0] > 0
+        
+        # Cache result
+        _antinuke_cache["whitelist_roles"][str(cache_key)] = (has_whitelisted_role, time.time())
+        return has_whitelisted_role
+    except Exception:
+        return False
+
+
+async def get_antinuke_threshold_fast(guild_id: int, action_type: str) -> Tuple[int, int]:
+    """Fast-path antinuke threshold fetch with aggressive caching (no retry)."""
+    import time
+    
+    # Check cache first
+    cache_key = (guild_id, action_type)
+    cache_entry = _antinuke_cache["antinuke_thresholds"].get(str(cache_key))
+    if cache_entry and _is_cache_valid("antinuke_thresholds", cache_key, cache_entry):
+        return cache_entry[0]
+    
+    # Try to fetch from database (no retry)
+    try:
+        db = await _get_db()
+        row = await db.execute(
+            "SELECT max_count, window_seconds FROM antinuke_thresholds WHERE guild_id = ? AND action_type = ?",
+            (guild_id, action_type)
+        )
+        row = await row.fetchone()
+        await _release_db(db)
+        
+        if row:
+            result = (row["max_count"], row["window_seconds"])
+            _antinuke_cache["antinuke_thresholds"][str(cache_key)] = (result, time.time())
+            return result
+        else:
+            # Return default thresholds
+            from config import DEFAULT_ANTINUKE_THRESHOLDS
+            default = DEFAULT_ANTINUKE_THRESHOLDS.get(action_type, (3, 10))
+            _antinuke_cache["antinuke_thresholds"][str(cache_key)] = (default, time.time())
+            return default
+    except Exception:
+        # Return default thresholds on error
+        from config import DEFAULT_ANTINUKE_THRESHOLDS
+        return DEFAULT_ANTINUKE_THRESHOLDS.get(action_type, (3, 10))
+
+
+async def log_action_fast(guild_id: int, action_type: str, user_id: int = 0, details: dict = None):
+    """Fast-path action logging - fire and forget (no retry, non-blocking)."""
+    try:
+        # Create a background task for logging to avoid blocking
+        async def _log_background():
+            try:
+                db = await _get_db()
+                await db.execute(
+                    "INSERT INTO action_log (guild_id, user_id, action_type, details, timestamp) VALUES (?, ?, ?, ?, ?)",
+                    (guild_id, user_id, action_type, json.dumps(details or {}), _now())
+                )
+                await db.commit()
+                await _release_db(db)
+            except Exception:
+                pass  # Silently fail - logging is non-critical
+        
+        # Spawn background task without waiting
+        import asyncio
+        asyncio.create_task(_log_background())
+    except Exception:
+        pass  # Silently fail
+
+
+def invalidate_antinuke_cache(guild_id: int = None):
+    """Invalidate antinuke cache for a specific guild or all guilds."""
+    import time
+    
+    if guild_id is None:
+        # Clear all cache
+        _antinuke_cache["guild_settings"].clear()
+        _antinuke_cache["whitelist_users"].clear()
+        _antinuke_cache["whitelist_roles"].clear()
+        _antinuke_cache["antinuke_thresholds"].clear()
+    else:
+        # Clear cache for specific guild
+        _antinuke_cache["guild_settings"].pop(guild_id, None)
+        
+        # Clear whitelist cache entries for this guild
+        keys_to_delete = [k for k in _antinuke_cache["whitelist_users"].keys() if str(guild_id) in k]
+        for key in keys_to_delete:
+            _antinuke_cache["whitelist_users"].pop(key, None)
+        
+        # Clear role whitelist cache entries for this guild
+        keys_to_delete = [k for k in _antinuke_cache["whitelist_roles"].keys() if str(guild_id) in k]
+        for key in keys_to_delete:
+            _antinuke_cache["whitelist_roles"].pop(key, None)
+        
+        # Clear threshold cache entries for this guild
+        keys_to_delete = [k for k in _antinuke_cache["antinuke_thresholds"].keys() if str(guild_id) in k]
+        for key in keys_to_delete:
+            _antinuke_cache["antinuke_thresholds"].pop(key, None)
 
 
 async def close_all_connections():

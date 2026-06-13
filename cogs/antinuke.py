@@ -15,6 +15,7 @@ import json
 import discord
 from discord import app_commands
 from datetime import datetime, timedelta, timezone
+import time
 from typing import Optional, List, Dict, Set
 from collections import deque
 
@@ -35,6 +36,13 @@ from database import (
     is_bot_whitelisted,
     user_has_whitelisted_role,
     is_user_whitelisted_optimized,
+    # Fast-path antinuke functions (no retry, cache-first)
+    get_guild_fast,
+    is_user_whitelisted_fast,
+    user_has_whitelisted_role_fast,
+    get_antinuke_threshold_fast,
+    log_action_fast,
+    invalidate_antinuke_cache,
 )
 from utils.embeds import antinuke_embed, error_embed, info_embed, success_embed
 from utils.cache import snapshot_guild
@@ -162,18 +170,42 @@ class Antinuke(commands.Cog):
         
         # Whitelist result cache: {(guild_id, user_id): (result, timestamp)}
         self._whitelist_cache: Dict[Tuple[int, int], Tuple[bool, datetime]] = {}
-        self._cache_ttl = 300  # 5 minutes
+        self._cache_ttl = 600  # 10 minutes (increased from 5 minutes for performance)
         
         # Discord object cache: {cache_key: (object, timestamp)}
         self._discord_cache: Dict[str, Tuple[Any, datetime]] = {}
-        self._discord_cache_ttl = 60  # 1 minute for Discord objects
+        self._discord_cache_ttl = 180  # 3 minutes for Discord objects (increased from 1 minute)
         
         # Safe admins JSON cache: {guild_id: (parsed_list, settings_timestamp)}
         self._safe_admins_cache: Dict[int, Tuple[List[int], str, datetime]] = {}
-        self._safe_admins_cache_ttl = 180  # 3 minutes for safe admins
+        self._safe_admins_cache_ttl = 600  # 10 minutes for safe admins (increased from 3 minutes)
+        
+        # Permission validation cache: {(guild_id, user_id, action_type): (has_permission, timestamp)}
+        self._permission_cache: Dict[Tuple[int, int, str], Tuple[bool, datetime]] = {}
+        self._permission_cache_ttl = 300  # 5 minutes for permission validation
         
         # Circuit breaker for parallel attacks: {(guild_id, user_id): punishment_timestamp}
         self._punished_users_cache: Dict[Tuple[int, int], datetime] = {}
+        
+        # Performance metrics for monitoring
+        self._metrics = {
+            "events_processed": 0,
+            "events_skipped_early": 0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "whitelist_checks": 0,
+            "whitelist_cached_hits": 0,
+            "db_fast_path_calls": 0,
+            "db_regular_calls": 0,
+            "audit_log_queries": 0,
+            "punishments_applied": 0,
+            "graceful_degradations": 0,
+            "detection_times_ms": [],  # Last 100 detection times
+        }
+        
+        # Priority-based task queue for background operations
+        self._task_queue = asyncio.PriorityQueue()
+        self._task_worker_task = None
         
         # Emergency mode tracking: guilds currently in lockdown
         self._emergency_mode_active: Set[int] = set()
@@ -187,8 +219,16 @@ class Antinuke(commands.Cog):
         # Lock for thread-safe operations
         self._lock = asyncio.Lock()
         
-        # API rate limiting for audit log queries (prevent rate limit exhaustion)
-        self._audit_log_rate_limiter: Dict[int, datetime] = {}  # guild_id -> last query time
+        # API rate limiting for audit log queries (token bucket algorithm)
+        self._audit_log_rate_limiter: Dict[int, Dict[str, float]] = {}  # guild_id -> {tokens: float, last_update: float}
+        self._audit_log_rate_limit = 5  # 5 queries per second per guild (increased from 1)
+        self._audit_log_burst_size = 10  # Allow burst of 10 queries
+        
+        # Discord API rate limit tracking (global buckets)
+        self._discord_api_buckets = {
+            "guild": {"tokens": 50, "last_update": time.time(), "rate": 50, "window": 1},  # 50 requests per second
+            "webhook": {"tokens": 5, "last_update": time.time(), "rate": 5, "window": 1},  # 5 requests per second
+        }
         
         # Graceful degradation: component health status
         self._component_health: Dict[str, bool] = {
@@ -205,12 +245,175 @@ class Antinuke(commands.Cog):
         self._locks.setdefault(guild_id, asyncio.Lock())
         return self._locks[guild_id]
 
+    async def _warm_cache(self):
+        """Pre-warm cache for active guilds to improve performance."""
+        try:
+            # Wait for bot to be ready
+            await self.bot.wait_until_ready()
+            
+            # Warm cache for all guilds
+            for guild in self.bot.guilds:
+                try:
+                    # Pre-load guild settings
+                    await get_guild_fast(guild.id)
+                    
+                    # Pre-load owner and bot user as whitelisted
+                    self._set_cached_whitelist_status(guild.id, guild.owner_id, True)
+                    if self.bot.user:
+                        self._set_cached_whitelist_status(guild.id, self.bot.user.id, True)
+                    
+                except Exception as e:
+                    self.logger.debug(f"Failed to warm cache for guild {guild.id}: {e}")
+            
+            self.logger.info(f"Antinuke cache warmed for {len(self.bot.guilds)} guilds")
+        except Exception as e:
+            self.logger.error(f"Cache warming failed: {e}")
+
+    def invalidate_guild_cache(self, guild_id: int):
+        """Invalidate cache for a specific guild when settings change."""
+        invalidate_antinuke_cache(guild_id)
+        self.logger.debug(f"Invalidated antinuke cache for guild {guild_id}")
+
+    def _record_metric(self, metric_name: str, value: Any = None):
+        """Record a performance metric."""
+        if metric_name in self._metrics:
+            if metric_name == "detection_times_ms":
+                # Keep only last 100 detection times
+                self._metrics[metric_name].append(value)
+                if len(self._metrics[metric_name]) > 100:
+                    self._metrics[metric_name].pop(0)
+            else:
+                self._metrics[metric_name] += 1 if value is None else value
+
+    def _get_average_detection_time(self) -> float:
+        """Get average detection time in milliseconds."""
+        times = self._metrics["detection_times_ms"]
+        if not times:
+            return 0.0
+        return sum(times) / len(times)
+
+    def _get_p95_detection_time(self) -> float:
+        """Get 95th percentile detection time in milliseconds."""
+        times = sorted(self._metrics["detection_times_ms"])
+        if not times:
+            return 0.0
+        index = int(len(times) * 0.95)
+        return times[min(index, len(times) - 1)]
+
+    def get_metrics_summary(self) -> Dict[str, Any]:
+        """Get a summary of performance metrics."""
+        return {
+            "events_processed": self._metrics["events_processed"],
+            "cache_hit_rate": self._metrics["cache_hits"] / max(self._metrics["cache_hits"] + self._metrics["cache_misses"], 1) * 100,
+            "whitelist_cache_hit_rate": self._metrics["whitelist_cached_hits"] / max(self._metrics["whitelist_checks"], 1) * 100,
+            "avg_detection_time_ms": self._get_average_detection_time(),
+            "p95_detection_time_ms": self._get_p95_detection_time(),
+            "punishments_applied": self._metrics["punishments_applied"],
+            "graceful_degradations": self._metrics["graceful_degradations"],
+        }
+    
+    async def _schedule_priority_task(self, priority: int, coro):
+        """Schedule a background task with priority (0 = highest priority)."""
+        await self._task_queue.put((priority, asyncio.create_task(coro)))
+    
+    async def _task_worker(self):
+        """Background worker for processing priority tasks."""
+        while True:
+            try:
+                priority, task = await self._task_queue.get()
+                await task
+                self._task_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self.logger.error(f"Priority task worker error: {e}", exc_info=True)
+    
+    async def _wait_for_discord_api_quota(self, bucket_name: str = "guild") -> None:
+        """Wait for Discord API quota using token bucket algorithm."""
+        async with self._lock:
+            now = time.time()
+            
+            if bucket_name not in self._discord_api_buckets:
+                return  # Unknown bucket, skip rate limiting
+            
+            bucket = self._discord_api_buckets[bucket_name]
+            
+            # Replenish tokens
+            time_since_update = now - bucket["last_update"]
+            bucket["tokens"] = min(bucket["rate"], bucket["tokens"] + time_since_update * bucket["rate"])
+            bucket["last_update"] = now
+            
+            # Wait if no tokens available
+            if bucket["tokens"] < 1:
+                wait_time = (1 - bucket["tokens"]) / bucket["rate"]
+                if wait_time > 0:
+                    await asyncio.sleep(min(wait_time, 0.05))  # Max 50ms wait
+            
+            # Consume a token
+            bucket["tokens"] -= 1
+    
+    async def run_benchmark(self, iterations: int = 100) -> Dict[str, float]:
+        """Run performance benchmark for antinuke operations."""
+        import random
+        
+        results = {
+            "whitelist_check_times": [],
+            "threshold_check_times": [],
+            "cache_hit_times": [],
+            "total_time": 0,
+        }
+        
+        guild_id = 123456789  # Test guild ID
+        user_id = 987654321  # Test user ID
+        
+        for i in range(iterations):
+            # Benchmark whitelist check
+            start = time.time()
+            await self._is_whitelisted(guild_id, user_id)
+            whitelist_time = (time.time() - start) * 1000
+            results["whitelist_check_times"].append(whitelist_time)
+            
+            # Benchmark threshold check
+            start = time.time()
+            await self._check_threshold(guild_id, user_id, "channel_delete")
+            threshold_time = (time.time() - start) * 1000
+            results["threshold_check_times"].append(threshold_time)
+            
+            # Benchmark cache hit
+            start = time.time()
+            self._get_cached_whitelist_status(guild_id, user_id)
+            cache_time = (time.time() - start) * 1000
+            results["cache_hit_times"].append(cache_time)
+        
+        results["total_time"] = sum(results["whitelist_check_times"]) + \
+                              sum(results["threshold_check_times"]) + \
+                              sum(results["cache_hit_times"])
+        
+        return {
+            "avg_whitelist_check_ms": sum(results["whitelist_check_times"]) / len(results["whitelist_check_times"]),
+            "avg_threshold_check_ms": sum(results["threshold_check_times"]) / len(results["threshold_check_times"]),
+            "avg_cache_hit_ms": sum(results["cache_hit_times"]) / len(results["cache_hit_times"]),
+            "total_time_ms": results["total_time"],
+            "iterations": iterations,
+        }
+
     async def cog_load(self):
         """Start the cleanup task when cog is loaded."""
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
+        # Start priority task worker
+        self._task_worker_task = asyncio.create_task(self._task_worker())
+        # Pre-warm cache for guilds that are already loaded
+        asyncio.create_task(self._warm_cache())
 
     async def cog_unload(self):
         """Stop the cleanup task when cog is unloaded."""
+        if self._task_worker_task:
+            self._task_worker_task.cancel()
+            try:
+                await self._task_worker_task
+            except asyncio.CancelledError:
+                pass
+        
         if self._cleanup_task:
             self._cleanup_task.cancel()
             try:
@@ -282,32 +485,82 @@ class Antinuke(commands.Cog):
         self._processed_events[event_key] = datetime.now(timezone.utc)
 
     async def _can_query_audit_log(self, guild_id: int) -> bool:
-        """Check if we can query audit log for this guild without hitting rate limits."""
+        """Check if we can query audit log for this guild without hitting rate limits (token bucket)."""
         async with self._lock:
-            now = datetime.now(timezone.utc)
-            last_query = self._audit_log_rate_limiter.get(guild_id)
+            now = datetime.now(timezone.utc).timestamp()
             
-            # Allow 1 audit log query per second per guild (conservative rate limit)
-            if last_query and (now - last_query).total_seconds() < 1.0:
+            # Initialize token bucket if not exists
+            if guild_id not in self._audit_log_rate_limiter:
+                self._audit_log_rate_limiter[guild_id] = {
+                    "tokens": self._audit_log_burst_size,
+                    "last_update": now
+                }
+            
+            bucket = self._audit_log_rate_limiter[guild_id]
+            
+            # Replenish tokens
+            time_since_update = now - bucket["last_update"]
+            bucket["tokens"] = min(self._audit_log_burst_size, bucket["tokens"] + time_since_update * self._audit_log_rate_limit)
+            bucket["last_update"] = now
+            
+            # Check if we have a token available
+            if bucket["tokens"] >= 1:
+                return True
+            else:
                 return False
-            
-            self._audit_log_rate_limiter[guild_id] = now
-            return True
 
     async def _wait_for_audit_log_quota(self, guild_id: int) -> None:
-        """Wait if necessary to respect audit log rate limits."""
+        """Wait if necessary to respect audit log rate limits (token bucket with minimal wait)."""
+        # Skip rate limiting during emergency mode for maximum speed
         async with self._lock:
-            now = datetime.now(timezone.utc)
-            last_query = self._audit_log_rate_limiter.get(guild_id)
+            in_emergency = guild_id in self._emergency_mode_active
+        if in_emergency:
+            return  # Bypass rate limiting during emergency mode
+        
+        async with self._lock:
+            now = datetime.now(timezone.utc).timestamp()
             
-            if last_query:
-                time_since_last = (now - last_query).totalseconds()
-                if time_since_last < 1.0:
-                    # Wait until we can make another query
-                    wait_time = 1.0 - time_since_last
-                    await asyncio.sleep(wait_time)
+            # Initialize token bucket if not exists
+            if guild_id not in self._audit_log_rate_limiter:
+                self._audit_log_rate_limiter[guild_id] = {
+                    "tokens": self._audit_log_burst_size,
+                    "last_update": now
+                }
             
-            self._audit_log_rate_limiter[guild_id] = datetime.now(timezone.utc)
+            bucket = self._audit_log_rate_limiter[guild_id]
+            
+            # Replenish tokens
+            time_since_update = now - bucket["last_update"]
+            bucket["tokens"] = min(self._audit_log_burst_size, bucket["tokens"] + time_since_update * self._audit_log_rate_limit)
+            bucket["last_update"] = now
+            
+            # If no tokens available, calculate wait time
+            if bucket["tokens"] < 1:
+                # Wait only if absolutely necessary (minimal wait for speed)
+                wait_time = (1 - bucket["tokens"]) / self._audit_log_rate_limit
+                if wait_time > 0:
+                    await asyncio.sleep(min(wait_time, 0.1))  # Max 100ms wait for speed
+                    bucket["tokens"] = min(self._audit_log_burst_size, bucket["tokens"] + wait_time * self._audit_log_rate_limit)
+            
+            # Consume a token
+            bucket["tokens"] -= 1
+
+    def _get_cached_permission(self, guild_id: int, user_id: int, action_type: str) -> Optional[bool]:
+        """Get cached permission validation result if available and not expired."""
+        cache_key = (guild_id, user_id, action_type)
+        if cache_key in self._permission_cache:
+            result, timestamp = self._permission_cache[cache_key]
+            if datetime.now(timezone.utc) - timestamp < timedelta(seconds=self._permission_cache_ttl):
+                return result
+            else:
+                # Expired, remove from cache
+                del self._permission_cache[cache_key]
+        return None
+
+    def _set_cached_permission(self, guild_id: int, user_id: int, action_type: str, result: bool) -> None:
+        """Cache permission validation result with current timestamp."""
+        cache_key = (guild_id, user_id, action_type)
+        self._permission_cache[cache_key] = (result, datetime.now(timezone.utc))
 
     def _validate_user_permission(self, guild: discord.Guild, member: discord.Member, action_type: str, target_id: int = 0) -> bool:
         """Validate if the user actually has permission to perform the action.
@@ -316,6 +569,11 @@ class Antinuke(commands.Cog):
         Returns True if the user has permission, False if they don't (should not be punished).
         """
         try:
+            # Check cache first for fast permission validation
+            cached_result = self._get_cached_permission(guild.id, member.id, action_type)
+            if cached_result is not None:
+                return cached_result
+            
             # Check basic guild permissions first
             if not member.guild_permissions.view_audit_log:
                 # User can't view audit logs, likely doesn't have high permissions
@@ -323,33 +581,36 @@ class Antinuke(commands.Cog):
                 pass
             
             # Check specific action permissions
+            has_permission = True  # Default to True (conservative approach)
+            
             if action_type == "channel_update":
                 # Check if user can manage channels
                 if not member.guild_permissions.manage_channels:
                     # User doesn't have permission to manage channels
                     # They shouldn't be punished for channel updates they couldn't perform
-                    return False
+                    has_permission = False
                     
             elif action_type in ["role_create", "role_update", "role_delete"]:
                 # Check if user can manage roles
                 if not member.guild_permissions.manage_roles:
-                    return False
+                    has_permission = False
                     
             elif action_type in ["ban", "kick"]:
                 # Check if user can ban/kick
                 if action_type == "ban" and not member.guild_permissions.ban_members:
-                    return False
+                    has_permission = False
                 if action_type == "kick" and not member.guild_permissions.kick_members:
-                    return False
+                    has_permission = False
                     
             elif action_type == "guild_update":
                 # Check if user can manage server
                 if not member.guild_permissions.manage_guild:
-                    return False
+                    has_permission = False
             
-            # If no specific permission check failed, assume they might have permission
-            # This is a conservative approach to avoid bypassing legitimate punishment
-            return True
+            # Cache the result
+            self._set_cached_permission(guild.id, member.id, action_type, has_permission)
+            
+            return has_permission
             
         except Exception as e:
             # If we can't validate permissions, err on the side of caution and allow punishment
@@ -416,6 +677,14 @@ class Antinuke(commands.Cog):
                 if old_safe_admins_keys:
                     self.logger.debug(f"Cleaned up {len(old_safe_admins_keys)} old safe admins cache entries")
                 
+                # Clean up permission cache
+                permission_cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._permission_cache_ttl)
+                old_permission_keys = [key for key, (_, timestamp) in self._permission_cache.items() if timestamp < permission_cutoff]
+                for key in old_permission_keys:
+                    del self._permission_cache[key]
+                if old_permission_keys:
+                    self.logger.debug(f"Cleaned up {len(old_permission_keys)} old permission cache entries")
+                
                 # Clean up rate tracker events
                 removed_events = self.rate_tracker.cleanup_old_events(max_age_seconds=3600)
                 if removed_events > 0:
@@ -447,9 +716,9 @@ class Antinuke(commands.Cog):
                 if old_event_keys:
                     self.logger.debug(f"Cleaned up {len(old_event_keys)} old processed events")
                 
-                # Clean up audit log rate limiter (remove entries older than 1 minute)
-                audit_log_cutoff = datetime.now(timezone.utc) - timedelta(minutes=1)
-                old_audit_log_keys = [guild_id for guild_id, timestamp in self._audit_log_rate_limiter.items() if timestamp < audit_log_cutoff]
+                # Clean up audit log rate limiter (remove entries older than 5 minutes for token bucket)
+                audit_log_cutoff = datetime.now(timezone.utc).timestamp() - 300  # 5 minutes
+                old_audit_log_keys = [guild_id for guild_id, bucket in self._audit_log_rate_limiter.items() if bucket.get("last_update", 0) < audit_log_cutoff]
                 for guild_id in old_audit_log_keys:
                     del self._audit_log_rate_limiter[guild_id]
                 if old_audit_log_keys:
@@ -461,9 +730,13 @@ class Antinuke(commands.Cog):
                 self.logger.error("Error in antinuke cleanup loop", exc_info=True)
 
     async def _is_whitelisted(self, guild_id: int, user_id: int) -> bool:
+        # Track whitelist checks
+        self._record_metric("whitelist_checks")
+        
         # Check cache first for fast lookup
         cached_result = self._get_cached_whitelist_status(guild_id, user_id)
         if cached_result is not None:
+            self._record_metric("whitelist_cached_hits")
             return cached_result
 
         if user_id == OWNER_ID:
@@ -485,8 +758,8 @@ class Antinuke(commands.Cog):
             self._set_cached_whitelist_status(guild_id, user_id, True)
             return True
 
-        # Check safe admin list with cached JSON parsing
-        settings = await get_guild(guild_id)
+        # Check safe admin list with cached JSON parsing (using fast-path guild settings)
+        settings = await get_guild_fast(guild_id)
         safe_admins_json = settings.get("antinuke_safe_admins", "[]")
         
         # Try to use cached safe admins list
@@ -503,7 +776,7 @@ class Antinuke(commands.Cog):
             self._set_cached_whitelist_status(guild_id, user_id, True)
             return True
 
-        # Check if user is a bot and if it's whitelisted using optimized function
+        # Check if user is a bot and if it's whitelisted using fast-path function
         member_cache_key = f"member:{guild_id}:{user_id}"
         member = self._get_cached_discord_object(member_cache_key)
         if not member and guild:
@@ -512,29 +785,48 @@ class Antinuke(commands.Cog):
                 self._set_cached_discord_object(member_cache_key, member)
         
         is_bot = member and member.bot
+        
+        # Parallel check: bot whitelist + role whitelist + user whitelist
+        # Use asyncio.gather for parallel execution when multiple checks needed
         if is_bot:
-            if await is_user_whitelisted_optimized(guild_id, user_id, is_bot=True):
+            if await is_user_whitelisted_fast(guild_id, user_id, is_bot=True):
                 self._set_cached_whitelist_status(guild_id, user_id, True)
                 return True
+            else:
+                # Cache the negative result
+                self._set_cached_whitelist_status(guild_id, user_id, False)
+                return False
 
-        # Check role-based whitelist (staff protection) using optimized function
+        # For non-bots, check role whitelist and user whitelist in parallel
         if member and member.roles:
             user_role_ids = {role.id for role in member.roles}
-            if await user_has_whitelisted_role(guild_id, user_id, user_role_ids):
+            
+            # Parallel checks for better performance
+            role_check, user_check = await asyncio.gather(
+                user_has_whitelisted_role_fast(guild_id, user_role_ids),
+                is_user_whitelisted_fast(guild_id, user_id, is_bot=False),
+                return_exceptions=True
+            )
+            
+            # Handle results
+            if not isinstance(role_check, Exception) and role_check:
                 self._set_cached_whitelist_status(guild_id, user_id, True)
                 return True
-
-        # Use optimized database function for user whitelist check
-        if await is_user_whitelisted_optimized(guild_id, user_id, is_bot=False):
-            self._set_cached_whitelist_status(guild_id, user_id, True)
-            return True
+            if not isinstance(user_check, Exception) and user_check:
+                self._set_cached_whitelist_status(guild_id, user_id, True)
+                return True
+        else:
+            # No roles, just check user whitelist
+            if await is_user_whitelisted_fast(guild_id, user_id, is_bot=False):
+                self._set_cached_whitelist_status(guild_id, user_id, True)
+                return True
 
         # Cache the negative result
         self._set_cached_whitelist_status(guild_id, user_id, False)
         return False
 
     async def _check_threshold(self, guild_id: int, user_id: int, action_type: str) -> bool:
-        max_count, window = await get_antinuke_threshold(guild_id, action_type)
+        max_count, window = await get_antinuke_threshold_fast(guild_id, action_type)
         self.rate_tracker.add_event(guild_id, user_id, action_type)
         count = self.rate_tracker.count_events(guild_id, user_id, action_type, window)
         return count > max_count
@@ -707,7 +999,7 @@ class Antinuke(commands.Cog):
 
             await self._delete_all_user_webhooks(guild, user_id)
 
-            await log_action(
+            await log_action_fast(
                 guild.id,
                 "antinuke_trigger",
                 user_id,
@@ -799,7 +1091,7 @@ class Antinuke(commands.Cog):
             if guild_name_changed:
                 asyncio.create_task(self._restore_guild_name(guild))
 
-            await log_action(
+            await log_action_fast(
                 guild.id,
                 "antinuke_trigger_instant",
                 user_id,
@@ -977,6 +1269,22 @@ class Antinuke(commands.Cog):
                 break
 
     @commands.Cog.listener()
+    async def on_guild_join(self, guild: discord.Guild):
+        """Pre-compute cache data when bot joins a guild."""
+        try:
+            # Pre-warm cache for this guild
+            await get_guild_fast(guild.id)
+            
+            # Cache owner and bot as whitelisted
+            self._set_cached_whitelist_status(guild.id, guild.owner_id, True)
+            if self.bot.user:
+                self._set_cached_whitelist_status(guild.id, self.bot.user.id, True)
+            
+            self.logger.debug(f"Pre-warmed antinuke cache for new guild: {guild.id}")
+        except Exception as e:
+            self.logger.error(f"Failed to pre-warm cache for guild {guild.id}: {e}")
+
+    @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         """Enhanced member join with instant restore if configured."""
         # This complements the existing antinuke join check
@@ -1139,7 +1447,7 @@ class Antinuke(commands.Cog):
     async def _process_audit_log_event(self, guild: discord.Guild, target_id: int, action: discord.AuditLogAction) -> Optional[discord.AuditLogEntry]:
         """Helper method to process audit log events with error handling."""
         try:
-            settings = await get_guild(guild.id)
+            settings = await get_guild_fast(guild.id)
             if not settings.get("antinuke_enabled", 1):
                 return None
                 
@@ -1153,9 +1461,15 @@ class Antinuke(commands.Cog):
         return None
 
     async def process_audit_entry(self, entry: discord.AuditLogEntry) -> None:
+        # Track start time for metrics
+        import time
+        start_time = time.time()
+        
+        # Early exit: Skip if basic validation fails
         if not entry.guild or not entry.user:
             return
 
+        # Early exit: Skip if already processed (event deduplication)
         if entry.id in self._processed_entries:
             return
         # Store entry with timestamp for cleanup
@@ -1164,6 +1478,18 @@ class Antinuke(commands.Cog):
         guild = entry.guild
         attacker = entry.user
         action = entry.action
+
+        # Early exit: Skip if attacker is the bot itself
+        if attacker.id == self.bot.user.id:
+            return
+
+        # Early exit: Skip if attacker is the guild owner (owner can do anything)
+        if attacker.id == guild.owner_id:
+            self._record_metric("events_skipped_early")
+            return
+
+        # Record event processed
+        self._record_metric("events_processed")
 
         # CRITICAL: Skip whitelist check for extremely dangerous actions
         # Even whitelisted users should be prevented from performing these critical attack vectors
@@ -1639,6 +1965,11 @@ class Antinuke(commands.Cog):
 
         if action == discord.AuditLogAction.bot_add and extra_bot_id is not None:
             await self._kick_bot_if_unauthorized(guild, attacker.id, extra_bot_id)
+        
+        # Record detection time metric
+        import time
+        detection_time_ms = (time.time() - start_time) * 1000
+        self._record_metric("detection_times_ms", detection_time_ms)
 
     async def _kick_bot_if_unauthorized(self, guild: discord.Guild, adder_id: int, bot_id: int) -> None:
         if await self._is_whitelisted(guild.id, adder_id):

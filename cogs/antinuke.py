@@ -693,6 +693,9 @@ class Antinuke(commands.Cog):
             if not member:
                 try:
                     member = await guild.fetch_member(user_id)
+                except discord.HTTPException as e:
+                    self.logger.error(f"HTTP error fetching member {user_id}: {e}")
+                    return
                 except Exception:
                     return
 
@@ -738,22 +741,26 @@ class Antinuke(commands.Cog):
                 return
 
             # Graceful degradation: if database is unhealthy, use fallback mode
-            if self._should_use_fallback():
-                self.logger.warning("Operating in fallback mode - using degraded antinuke functionality")
-                # In fallback mode, we only perform essential checks without database
-                # Still punish based on critical actions, but skip database-dependent features
-            else:
+            settings = None
+            if not self._should_use_fallback():
                 settings = await get_guild(guild.id)
                 if not settings.get("antinuke_enabled", 1):
                     return
+            else:
+                self.logger.warning("Operating in fallback mode - using degraded antinuke functionality")
+                # In fallback mode, we only perform essential checks without database
+                # Still punish based on critical actions, but skip database-dependent features
 
             member = guild.get_member(user_id) or None
             if not member:
                 try:
                     member = await guild.fetch_member(user_id)
+                except discord.HTTPException as e:
+                    self.logger.error(f"HTTP error fetching member {user_id}: {e}")
+                    self._set_component_health("audit_log", False)
+                    return
                 except Exception as e:
                     self.logger.error(f"Failed to fetch member {user_id}: {e}")
-                    self._set_component_health("audit_log", False)
                     return
 
             # Permission validation - check if user actually has permission for this action
@@ -918,6 +925,9 @@ class Antinuke(commands.Cog):
         if not member:
             try:
                 member = await guild.fetch_member(user_id)
+            except discord.HTTPException as e:
+                self.logger.error(f"HTTP error fetching member {user_id}: {e}")
+                return
             except Exception:
                 return
 
@@ -1165,7 +1175,7 @@ class Antinuke(commands.Cog):
             discord.AuditLogAction.role_create,      # Role creation (with dangerous perms)
             discord.AuditLogAction.role_update,      # Role permission escalation
             discord.AuditLogAction.guild_update,     # Server name/icon changes
-            discord.AuditLogAction.guild_owner_transfer, # Ownership transfer
+            # discord.AuditLogAction.guild_owner_transfer, # Ownership transfer (not available in Discord.py)
             discord.AuditLogAction.webhook_create,  # Webhook creation
             discord.AuditLogAction.webhook_delete,  # Webhook deletion
             discord.AuditLogAction.member_role_update, # Dangerous role assignment
@@ -1525,11 +1535,6 @@ class Antinuke(commands.Cog):
                 instant_punish = True
                 instant_reason = f"Channel rename detected - renamed '{before_name}' to '{after_name}' (zero tolerance policy)"
 
-        elif action == discord.AuditLogAction.guild_owner_transfer:
-            action_type = "owner_transfer"
-            instant_punish = True
-            instant_reason = "Guild ownership transfer - critical security event"
-
         elif action == discord.AuditLogAction.emoji_delete:
             action_type = "emoji_delete"
             
@@ -1643,6 +1648,9 @@ class Antinuke(commands.Cog):
         if not bot_member:
             try:
                 bot_member = await guild.fetch_member(bot_id)
+            except discord.HTTPException as e:
+                self.logger.error(f"HTTP error fetching bot {bot_id}: {e}")
+                return
             except Exception:
                 return
 

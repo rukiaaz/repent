@@ -111,8 +111,17 @@ class AutoMod(commands.Cog):
         # Skip normal bots but keep scanning Webhooks
         if message.author.bot and not message.webhook_id:
             return True
-        if message.author.guild_permissions.administrator:
-            return True  # Admins bypass automod
+        
+        # Check if author has administrator permission (handle User vs Member objects)
+        # User objects don't have guild_permissions, need to get Member object
+        if isinstance(message.author, discord.Member):
+            if message.author.guild_permissions.administrator:
+                return True  # Admins bypass automod
+        elif message.guild:
+            # If author is a User object, try to get their Member object
+            member = message.guild.get_member(message.author.id)
+            if member and member.guild_permissions.administrator:
+                return True  # Admins bypass automod
 
         settings = await get_guild(message.guild.id)
         if not settings.get("automod_enabled", 1):

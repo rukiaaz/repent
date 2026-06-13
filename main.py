@@ -18,7 +18,6 @@ from utils.logger import get_logger
 from utils.health_check import get_health_checker
 from utils.cache_layer import get_cache_layer
 from utils.rate_limiter import set_cache_layer_for_rate_limiter
-from utils.announcements import get_recent_announcements
 
 
 class Repent(commands.Bot):
@@ -110,9 +109,6 @@ class Repent(commands.Bot):
             except Exception as e:
                 self.logger.error(f"Failed to snapshot guild {guild.id}", exc_info=True)
 
-        # Send announcements to all guilds
-        await self._send_announcements_to_guilds()
-
         # Set presence
         await self.update_presence()
 
@@ -128,136 +124,6 @@ class Repent(commands.Bot):
             status=discord.Status.online,
         )
 
-    async def _get_or_create_announcement_channel(self, guild: discord.Guild):
-        """Get existing announcement channel or create a new one."""
-        # Try to find existing announcement channel
-        announcement_channel = discord.utils.get(guild.text_channels, name="repent-announcements")
-        
-        if not announcement_channel:
-            try:
-                # Create new announcement channel
-                overwrites = {
-                    guild.default_role: discord.PermissionOverwrite(
-                        read_messages=True,
-                        send_messages=False,
-                        add_reactions=False
-                    ),
-                    guild.me: discord.PermissionOverwrite(
-                        read_messages=True,
-                        send_messages=True,
-                        embed_links=True,
-                        manage_channels=True
-                    )
-                }
-                
-                announcement_channel = await guild.create_text_channel(
-                    name="repent-announcements",
-                    reason="[Repent] Auto-created announcement channel for bot updates",
-                    overwrites=overwrites,
-                    position=0  # Put at top of channel list
-                )
-                
-                # Send welcome message
-                welcome_embed = discord.Embed(
-                    title="📢 Repent Announcements",
-                    description="This channel will automatically receive updates about bot changes, new features, and important announcements.",
-                    color=0x4488FF
-                )
-                welcome_embed.add_field(
-                    name="About",
-                    value="You can safely mute this channel if you don't want to receive update notifications, but we recommend keeping an eye on important updates.",
-                    inline=False
-                )
-                welcome_embed.set_footer(text=f"Powered by {self.user.name}")
-                await announcement_channel.send(embed=welcome_embed)
-                
-            except discord.Forbidden:
-                self.logger.warning(f"Failed to create announcement channel for guild {guild.id} - missing permissions")
-                return None
-            except discord.HTTPException as e:
-                if e.code == 30013:  # Maximum number of channels reached
-                    self.logger.warning(f"Cannot create announcement channel for guild {guild.id} - maximum channel limit (500) reached")
-                    # Try to find any existing text channel to use instead
-                    if guild.text_channels:
-                        self.logger.info(f"Using first available text channel for announcements in guild {guild.id}")
-                        return guild.text_channels[0]
-                    return None
-                else:
-                    self.logger.error(f"HTTP error creating announcement channel for guild {guild.id}: {e}", exc_info=True)
-                    return None
-            except Exception as e:
-                self.logger.error(f"Error creating announcement channel for guild {guild.id}: {e}", exc_info=True)
-                return None
-        
-        return announcement_channel
-
-    async def _send_announcements(self, channel: discord.TextChannel, guild_id: int):
-        """Send only unsent announcements to a channel."""
-        try:
-            from database import get_unsent_announcements, mark_announcement_sent
-            all_announcements = get_recent_announcements(limit=10)
-            
-            if not all_announcements:
-                return
-            
-            # Get only unsent announcements for this guild
-            unsent_announcements = await get_unsent_announcements(guild_id, all_announcements)
-            
-            if not unsent_announcements:
-                self.logger.info(f"No new announcements to send to guild {guild_id}")
-                return
-            
-            self.logger.info(f"Sending {len(unsent_announcements)} new announcements to guild {guild_id}")
-            
-            for ann in unsent_announcements:
-                # Choose color based on importance
-                color_map = {
-                    "low": 0x888888,
-                    "normal": 0x4488FF,
-                    "high": 0xFFAA00,
-                    "critical": 0xFF4444
-                }
-                color = color_map.get(ann.get("importance", "normal"), 0x4488FF)
-                
-                embed = discord.Embed(
-                    title=f"📢 {ann['title']}",
-                    description=ann['description'],
-                    color=color
-                )
-                
-                # Add date if available
-                if ann.get("date"):
-                    try:
-                        date_str = datetime.fromisoformat(ann['date']).strftime("%Y-%m-%d %H:%M UTC")
-                        embed.add_field(name="Date", value=date_str, inline=True)
-                    except:
-                        pass
-                
-                # Add version if available
-                if ann.get("version"):
-                    embed.add_field(name="Version", value=ann['version'], inline=True)
-                
-                embed.set_footer(text=f"Update ID: {ann['id']} | Powered by {self.user.name}")
-                
-                await channel.send(embed=embed)
-                
-                # Mark this announcement as sent to this guild
-                await mark_announcement_sent(guild_id, ann['id'])
-                
-        except Exception as e:
-            self.logger.error(f"Error sending announcements to channel {channel.id}: {e}", exc_info=True)
-
-    async def _send_announcements_to_guilds(self):
-        """Send announcements to all guilds."""
-        for guild in self.guilds:
-            try:
-                announcement_channel = await self._get_or_create_announcement_channel(guild)
-                if announcement_channel:
-                    await self._send_announcements(announcement_channel, guild.id)
-                    self.logger.info(f"Sent announcements to guild {guild.name} ({guild.id})")
-            except Exception as e:
-                self.logger.error(f"Failed to send announcements to guild {guild.id}: {e}", exc_info=True)
-
     async def on_guild_join(self, guild: discord.Guild):
         """Cache newly joined guild immediately."""
         try:
@@ -267,15 +133,6 @@ class Repent(commands.Bot):
             await self.update_presence()
         except Exception as e:
             self.logger.error(f"Failed to cache guild {guild.id}", exc_info=True)
-
-        # Create announcement channel and send announcements
-        try:
-            announcement_channel = await self._get_or_create_announcement_channel(guild)
-            if announcement_channel:
-                await self._send_announcements(announcement_channel)
-                self.logger.info(f"Created announcement channel for new guild {guild.name} ({guild.id})")
-        except Exception as e:
-            self.logger.error(f"Failed to setup announcements for new guild {guild.id}: {e}", exc_info=True)
 
         # Notify owner
         try:

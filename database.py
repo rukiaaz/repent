@@ -10,7 +10,39 @@ import time
 import aiosqlite
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any, Tuple, Set
+from functools import wraps
 from config import DB_PATH
+
+# Retry decorator for database operations to handle locks
+def with_retry(max_retries=3, backoff_factor=0.5):
+    """Decorator to retry database operations on lock errors with exponential backoff."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except aiosqlite.OperationalError as e:
+                    last_exception = e
+                    if "database is locked" in str(e).lower() or "database is locked" in str(e):
+                        if attempt < max_retries - 1:
+                            wait_time = backoff_factor * (2 ** attempt)
+                            # Log retry attempt
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"Database locked, retrying in {wait_time:.1f}s (attempt {attempt + 1}/{max_retries})")
+                            await asyncio.sleep(wait_time)
+                            continue
+                    # Re-raise if not a lock error or max retries exceeded
+                    raise
+                except Exception as e:
+                    # Re-raise any other exception immediately
+                    raise
+            # If we exhausted retries, raise the last exception
+            raise last_exception
+        return wrapper
+    return decorator
 
 # Cache layer import (will be initialized later)
 _cache_layer = None
@@ -86,8 +118,10 @@ class ConnectionPool:
             await db.execute("PRAGMA journal_mode = WAL")
             # Enable foreign key constraints
             await db.execute("PRAGMA foreign_keys = ON")
-            # Set busy timeout to handle concurrent access
-            await db.execute("PRAGMA busy_timeout = 5000")
+            # Set busy timeout to handle concurrent access (increased from 5s to 30s)
+            await db.execute("PRAGMA busy_timeout = 30000")
+            # Set synchronous to NORMAL for better write performance
+            await db.execute("PRAGMA synchronous = NORMAL")
             return db
     
     async def release(self, db: aiosqlite.Connection):
@@ -735,6 +769,7 @@ async def purge_old_data():
 
 
 # ── Guild Settings ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def get_guild(guild_id: int) -> Dict[str, Any]:
     # Try cache first
     if _cache_layer:
@@ -766,6 +801,7 @@ async def get_guild(guild_id: int) -> Dict[str, Any]:
     return result
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def update_guild(guild_id: int, **kwargs):
     # Security: Validate column names to prevent SQL injection
     if not _validate_column_names(set(kwargs.keys()), GUILDS_ALLOWED_COLUMNS):
@@ -1152,6 +1188,7 @@ async def clear_rate_events(guild_id: int, user_id: int, action_type: str):
 
 
 # ── Punished Users ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def add_punished_user(
     guild_id: int, user_id: int, reason: str, punished_by: int, punishment_type: str
 ):
@@ -1166,6 +1203,7 @@ async def add_punished_user(
     await _release_db(db)
 
 
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def remove_punished_user(guild_id: int, user_id: int):
     db = await _get_db()
     await db.execute(
@@ -1367,6 +1405,7 @@ async def delete_cached_channel(guild_id: int, channel_id: int):
 
 
 # Snapshot management functions
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def create_snapshot(guild_id: int, data: Dict[str, Any]) -> int:
     """Create a new snapshot for a guild with current state."""
     db = await _get_db()
@@ -1859,6 +1898,7 @@ async def remove_ignored_channel(guild_id: int, channel_id: int, module: str = "
 
 
 # ── Action Log ──
+@with_retry(max_retries=5, backoff_factor=0.3)
 async def log_action(guild_id: int, action_type: str, user_id: int = 0, details: dict = None):
     db = await _get_db()
     await db.execute(

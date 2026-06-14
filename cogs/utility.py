@@ -21,6 +21,7 @@ from database import get_afk, remove_afk, set_afk
 from utils.embeds import error_embed, info_embed, success_embed
 from utils.health_check import get_health_checker
 from utils.announcements import get_recent_announcements
+from utils.sync_simple import sync_commands_simple
 
 
 class Utility(commands.Cog):
@@ -679,6 +680,42 @@ class Utility(commands.Cog):
             await interaction.followup.send(
                 embed=error_embed(f"Failed to fetch announcements: {str(e)}"),
                 ephemeral=True
+            )
+
+    @app_commands.command(name="sync", description="Manually sync slash commands (Bot Owner only)")
+    @app_commands.describe(clear="Clear all commands before syncing (removes stale commands)")
+    async def sync_commands(self, interaction: discord.Interaction, clear: bool = False):
+        """Manually sync slash commands - owner only."""
+        if interaction.user.id != OWNER_ID:
+            return await interaction.response.send_message(
+                embed=error_embed("Only the bot owner can use this command."),
+                ephemeral=True
+            )
+        
+        await interaction.response.defer(thinking=True)
+        
+        try:
+            stats = await sync_commands_simple(self.bot, clear_first=clear)
+            
+            if stats.get('success', False):
+                embed = success_embed(
+                    "Commands Synced",
+                    f"Successfully synced {stats['synced']} commands to Discord." + 
+                    (f" (Tree cleared first)" if clear else "")
+                )
+                embed.add_field(name="Commands in Tree", value=str(stats['tree_commands']), inline=True)
+                embed.add_field(name="Synced to Discord", value=str(stats['synced']), inline=True)
+                embed.add_field(name="Verified in Discord", value=str(stats['verified']), inline=True)
+                await interaction.followup.send(embed=embed, ephemeral=False)
+            else:
+                await interaction.followup.send(
+                    embed=error_embed(f"Sync failed: {stats.get('error', 'Unknown error')}"),
+                    ephemeral=False
+                )
+        except Exception as e:
+            await interaction.followup.send(
+                embed=error_embed(f"Error during sync: {str(e)}"),
+                ephemeral=False
             )
 
 

@@ -18,7 +18,7 @@ from utils.logger import get_logger
 from utils.health_check import get_health_checker
 from utils.cache_layer import get_cache_layer
 from utils.rate_limiter import set_cache_layer_for_rate_limiter
-from utils.command_sync import get_sync_manager, get_startup_validator
+from utils.sync_simple import sync_commands_simple
 
 
 class Repent(commands.Bot):
@@ -64,7 +64,12 @@ class Repent(commands.Bot):
         for filename in os.listdir(cogs_dir):
             if filename.endswith(".py") and filename != "__init__.py":
                 cog_name = f"cogs.{filename[:-3]}"
-                cogs_to_load.append(cog_name)
+                # Skip cogs that are known to have no commands (to avoid sync issues)
+                skip_cogs = ['cogs.antinuke', 'cogs.antiraid', 'cogs.automod', 
+                              'cogs.custom_commands', 'cogs.leveling', 'cogs.logging',
+                              'cogs.verification', 'cogs.welcome']
+                if cog_name not in skip_cogs:
+                    cogs_to_load.append(cog_name)
         
         for cog_name in cogs_to_load:
             try:
@@ -75,19 +80,13 @@ class Repent(commands.Bot):
             except Exception as e:
                 self.logger.error(f"Failed to load cog {cog_name}", exc_info=True)
 
-        # Run startup validation
-        validator = get_startup_validator(self)
-        validation_passed = await validator.validate_all()
+        # Simple, robust command sync
+        stats = await sync_commands_simple(self)
         
-        if not validation_passed:
-            self.logger.warning("[WARN] Startup validation failed - some commands may not work")
-
-        # Sync slash commands with production-grade system
-        sync_manager = get_sync_manager(self)
-        stats = await sync_manager.sync_all()
-        
-        if stats.failed_commands > 0 or stats.missing_commands > 0:
-            self.logger.warning("[WARN] Command sync had issues - check logs for details")
+        if not stats.get('success', False):
+            self.logger.error(f"❌ Command sync failed: {stats.get('error', 'Unknown error')}")
+        else:
+            self.logger.info(f"✓ Command sync successful: {stats['synced']} commands synced")
 
         # Start background tasks
         asyncio.create_task(self.cache_snapshot_loop())

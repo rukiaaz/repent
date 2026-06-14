@@ -16,7 +16,8 @@
       "Exec(git commit)",
       "Exec(git push)",
       "Exec(if)",
-      "Exec(Remove-Item)"
+      "Exec(Remove-Item)",
+      "Exec(mv)"
     ]
   }
 }

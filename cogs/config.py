@@ -703,227 +703,322 @@ class Config(commands.Cog):
         await interaction.followup.send(embed=embed, ephemeral=False)
 
     # ── Bot Whitelist Commands ──
+    class BotWhitelistView(discord.ui.View):
+        """Bot whitelist action selection view with dropdown."""
+        def __init__(self, cog, guild):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.guild = guild
+            self.action = None
+        
+        @discord.ui.select(
+            placeholder="Select Action",
+            options=create_whitelist_action_dropdown()
+        )
+        async def select_action(self, interaction: discord.Interaction, select: discord.ui.Select):
+            self.action = select.values[0]
+            
+            if self.action == "list":
+                await self.cog._show_bot_whitelist_list(interaction, self.guild)
+                self.stop()
+            elif self.action in ["add", "remove"]:
+                await interaction.response.send_message(
+                    "Please mention the bot to add/remove with the command:\n`/botwhitelist add/remove @bot`",
+                    ephemeral=True
+                )
+                self.stop()
+
     @app_commands.command(name="botwhitelist", description="Manage whitelisted bots - they won't be punished by antinuke (Admin only)")
-    @app_commands.describe(
-        action="add, remove, or list",
-        bot="Bot to add/remove",
-        reason="Reason for whitelisting",
-    )
     @mod_rate_limit(rate=10, per=60)  # 10 per minute
-    async def botwhitelist(
-        self,
-        interaction: discord.Interaction,
-        action: str,
-        bot: discord.Member = None,
-        reason: str = "Trusted bot",
-    ):
+    async def botwhitelist(self, interaction: discord.Interaction):
+        """Bot whitelist with dropdown menu."""
         if not await self._is_admin(interaction):
             return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
-
+        
         guild = interaction.guild
-        action_l = action.lower().strip()
+        view = self.BotWhitelistView(self, guild)
+        embed = discord.Embed(
+            title="🤖 Bot Whitelist",
+            description="Select an action to manage whitelisted bots.",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Add", value="Add a bot to the whitelist (won't be punished by antinuke)", inline=False)
+        embed.add_field(name="Remove", value="Remove a bot from the whitelist", inline=False)
+        embed.add_field(name="View List", value="View all whitelisted bots", inline=False)
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-        if action_l == "add":
-            if not bot:
-                return await interaction.response.send_message(embed=error_embed("Provide a bot."), ephemeral=True)
-            if not bot.bot:
-                return await interaction.response.send_message(embed=error_embed("This is not a bot."), ephemeral=True)
-            
-            await add_bot_whitelist(guild.id, bot.id, interaction.user.id, reason)
-            await log_action(
-                guild.id,
-                "bot_whitelist_add",
-                bot.id,
-                {"reason": reason, "added_by": interaction.user.id},
-            )
-            return await interaction.response.send_message(
-                embed=success_embed("Bot Whitelisted", f"{bot.mention} is now whitelisted and won't be punished by antinuke.\n**Reason:** {reason}"),
-                ephemeral=False,
-            )
+    async def _add_bot_to_whitelist(self, interaction: discord.Interaction, bot: discord.Member, reason: str):
+        """Helper to add bot to whitelist."""
+        guild = interaction.guild
+        
+        if not bot.bot:
+            return await interaction.followup.send(embed=error_embed("This is not a bot."), ephemeral=True)
+        
+        await add_bot_whitelist(guild.id, bot.id, interaction.user.id, reason)
+        await log_action(
+            guild.id,
+            "bot_whitelist_add",
+            bot.id,
+            {"reason": reason, "added_by": interaction.user.id},
+        )
+        await interaction.followup.send(
+            embed=success_embed("Bot Whitelisted", f"{bot.mention} is now whitelisted and won't be punished by antinuke.\n**Reason:** {reason}"),
+            ephemeral=False,
+        )
 
-        if action_l == "remove":
-            if not bot:
-                return await interaction.response.send_message(embed=error_embed("Provide a bot."), ephemeral=True)
-            if not bot.bot:
-                return await interaction.response.send_message(embed=error_embed("This is not a bot."), ephemeral=True)
-            
-            await remove_bot_whitelist(guild.id, bot.id)
-            await log_action(guild.id, "bot_whitelist_remove", bot.id, {"removed_by": interaction.user.id})
-            return await interaction.response.send_message(
-                embed=success_embed("Bot Removed", f"{bot.mention} removed from bot whitelist."),
-                ephemeral=False,
-            )
+    async def _remove_bot_from_whitelist(self, interaction: discord.Interaction, bot: discord.Member):
+        """Helper to remove bot from whitelist."""
+        guild = interaction.guild
+        
+        if not bot.bot:
+            return await interaction.followup.send(embed=error_embed("This is not a bot."), ephemeral=True)
+        
+        await remove_bot_whitelist(guild.id, bot.id)
+        await log_action(guild.id, "bot_whitelist_remove", bot.id, {"removed_by": interaction.user.id})
+        await interaction.followup.send(
+            embed=success_embed("Bot Removed", f"{bot.mention} removed from bot whitelist."),
+            ephemeral=False,
+        )
 
-        if action_l == "list":
-            entries = await get_bot_whitelist(guild.id)
-            if not entries:
-                return await interaction.response.send_message(embed=info_embed("Bot Whitelist", "No bots whitelisted."), ephemeral=False)
+    async def _show_bot_whitelist_list(self, interaction: discord.Interaction, guild):
+        """Helper to show bot whitelist list."""
+        await interaction.response.defer(thinking=True)
+        
+        entries = await get_bot_whitelist(guild.id)
+        if not entries:
+            await interaction.followup.send(embed=info_embed("Bot Whitelist", "No bots whitelisted."), ephemeral=False)
+            return
 
-            lines = []
-            for e in entries[:20]:
-                member = guild.get_member(e["bot_id"])
-                name = member.mention if member else f"<@{e['bot_id']}>"
-                reason_text = e.get("reason", "No reason")
-                lines.append(f"{name} — `{reason_text}`")
+        lines = []
+        for e in entries[:20]:
+            member = guild.get_member(e["bot_id"])
+            name = member.mention if member else f"<@{e['bot_id']}>"
+            reason_text = e.get("reason", "No reason")
+            lines.append(f"{name} — `{reason_text}`")
 
-            embed = info_embed("Whitelisted Bots", "\n".join(lines))
-            embed.add_field(name="Note", value="Whitelisted bots won't be punished by antinuke systems.", inline=False)
-            return await interaction.response.send_message(embed=embed, ephemeral=False)
-
-        return await interaction.response.send_message(embed=error_embed("Use: `add`, `remove`, or `list`."), ephemeral=True)
+        embed = discord.Embed(
+            title="🤖 Whitelisted Bots",
+            description="\n".join(lines) if lines else "No bots whitelisted.",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Note", value="Whitelisted bots won't be punished by antinuke systems.", inline=False)
+        embed.set_footer(text=f"Total: {len(entries)} bot(s)")
+        
+        await interaction.followup.send(embed=embed, ephemeral=False)
 
     # ── Safe Admin Commands ──
+    class SafeAdminView(discord.ui.View):
+        """Safe admin action selection view with dropdown."""
+        def __init__(self, cog, guild):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.guild = guild
+            self.action = None
+        
+        @discord.ui.select(
+            placeholder="Select Action",
+            options=create_whitelist_action_dropdown()
+        )
+        async def select_action(self, interaction: discord.Interaction, select: discord.ui.Select):
+            self.action = select.values[0]
+            
+            if self.action == "list":
+                await self.cog._show_safe_admin_list(interaction, self.guild)
+                self.stop()
+            elif self.action in ["add", "remove"]:
+                await interaction.response.send_message(
+                    "Please mention the admin to add/remove with the command:\n`/safeadmin add/remove @admin`",
+                    ephemeral=True
+                )
+                self.stop()
+
     @app_commands.command(name="safeadmin", description="Manage safe admins - immune to antinuke (Admin only)")
-    @app_commands.describe(action="add, remove, or list", user="User to add/remove")
     @mod_rate_limit(rate=10, per=60)  # 10 per minute
-    async def safeadmin(self, interaction: discord.Interaction, action: str, user: discord.Member = None):
+    async def safeadmin(self, interaction: discord.Interaction):
+        """Safe admin with dropdown menu."""
         if not await self._is_admin(interaction):
             return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
-
+        
         guild = interaction.guild
-        action_l = action.lower().strip()
-        settings = await get_guild(guild.id)
+        view = self.SafeAdminView(self, guild)
+        embed = discord.Embed(
+            title="🔐 Safe Admin",
+            description="Select an action to manage safe admins (immune to antinuke).",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Add", value="Add a safe admin (immune to antinuke)", inline=False)
+        embed.add_field(name="Remove", value="Remove a safe admin", inline=False)
+        embed.add_field(name="View List", value="View all safe admins", inline=False)
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-        if action_l == "add":
-            if not user:
-                return await interaction.response.send_message(embed=error_embed("Provide a user."), ephemeral=True)
-            
-            # Get current safe admins
-            try:
-                import json
-                safe_admins_json = settings.get("antinuke_safe_admins", "[]")
-                safe_admins = json.loads(safe_admins_json)
-            except json.JSONDecodeError:
-                safe_admins = []
-            
-            if user.id in safe_admins:
-                return await interaction.response.send_message(embed=error_embed("User is already a safe admin."), ephemeral=True)
-            
-            safe_admins.append(user.id)
-            await update_guild(guild.id, antinuke_safe_admins=json.dumps(safe_admins))
-            await log_action(guild.id, "safe_admin_added", user.id, {"added_by": interaction.user.id})
-            
-            return await interaction.response.send_message(
-                embed=success_embed("Safe Admin Added", f"{user.mention} is now immune to antinuke punishments."),
-                ephemeral=False,
+    async def _add_safe_admin(self, interaction: discord.Interaction, user: discord.Member):
+        """Helper to add safe admin."""
+        guild = interaction.guild
+        
+        if user.id == OWNER_ID:
+            return await interaction.followup.send(
+                embed=error_embed("The bot owner is automatically a safe admin."),
+                ephemeral=True
             )
+        
+        await add_safe_admin(guild.id, user.id, interaction.user.id)
+        await log_action(
+            guild.id,
+            "safe_admin_add",
+            user.id,
+            {"added_by": interaction.user.id},
+        )
+        await interaction.followup.send(
+            embed=success_embed("Safe Admin Added", f"{user.mention} is now a safe admin and immune to antinuke."),
+            ephemeral=False,
+        )
 
-        elif action_l == "remove":
-            if not user:
-                return await interaction.response.send_message(embed=error_embed("Provide a user."), ephemeral=True)
-            
-            # Get current safe admins
-            try:
-                import json
-                safe_admins_json = settings.get("antinuke_safe_admins", "[]")
-                safe_admins = json.loads(safe_admins_json)
-            except json.JSONDecodeError:
-                safe_admins = []
-            
-            if user.id not in safe_admins:
-                return await interaction.response.send_message(embed=error_embed("User is not a safe admin."), ephemeral=True)
-            
-            safe_admins.remove(user.id)
-            await update_guild(guild.id, antinuke_safe_admins=json.dumps(safe_admins))
-            await log_action(guild.id, "safe_admin_removed", user.id, {"removed_by": interaction.user.id})
-            
-            return await interaction.response.send_message(
-                embed=success_embed("Safe Admin Removed", f"{user.mention} is no longer immune to antinuke."),
-                ephemeral=False,
+    async def _remove_safe_admin(self, interaction: discord.Interaction, user: discord.Member):
+        """Helper to remove safe admin."""
+        guild = interaction.guild
+        
+        if user.id == OWNER_ID:
+            return await interaction.followup.send(
+                embed=error_embed("Cannot remove the bot owner from safe admins."),
+                ephemeral=True
             )
+        
+        await remove_safe_admin(guild.id, user.id)
+        await log_action(guild.id, "safe_admin_remove", user.id, {"removed_by": interaction.user.id})
+        await interaction.followup.send(
+            embed=success_embed("Safe Admin Removed", f"{user.mention} removed from safe admins."),
+            ephemeral=False,
+        )
 
-        elif action_l == "list":
-            try:
-                import json
-                safe_admins_json = settings.get("antinuke_safe_admins", "[]")
-                safe_admins = json.loads(safe_admins_json)
-            except json.JSONDecodeError:
-                safe_admins = []
-            
-            if not safe_admins:
-                return await interaction.response.send_message(
-                    embed=info_embed("Safe Admins", "No safe admins configured."),
-                    ephemeral=False,
-                )
-            
-            lines = []
-            for admin_id in safe_admins:
-                member = guild.get_member(admin_id)
-                name = member.mention if member else f"<@{admin_id}>"
-                lines.append(name)
-            
-            embed = info_embed("Safe Admins", "\n".join(lines))
-            embed.add_field(name="Note", value="Safe admins are immune to antinuke punishments.", inline=False)
-            return await interaction.response.send_message(embed=embed, ephemeral=False)
+    async def _show_safe_admin_list(self, interaction: discord.Interaction, guild):
+        """Helper to show safe admin list."""
+        await interaction.response.defer(thinking=True)
+        
+        entries = await get_safe_admins(guild.id)
+        if not entries:
+            await interaction.followup.send(embed=info_embed("Safe Admins", "No safe admins configured."), ephemeral=False)
+            return
 
-        else:
-            return await interaction.response.send_message(embed=error_embed("Use: `add`, `remove`, or `list`."), ephemeral=True)
+        lines = []
+        for e in entries[:20]:
+            member = guild.get_member(e["user_id"])
+            name = member.mention if member else f"<@{e['user_id']}>"
+            added_by = guild.get_member(e.get("added_by", 0))
+            added_text = added_by.mention if added_by else "Unknown"
+            lines.append(f"{name} — Added by {added_text}")
+
+        embed = discord.Embed(
+            title="🔐 Safe Admins",
+            description="\n".join(lines) if lines else "No safe admins configured.",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Note", value="Safe admins are immune to antinuke systems.", inline=False)
+        embed.set_footer(text=f"Total: {len(entries)} admin(s)")
+        
+        await interaction.followup.send(embed=embed, ephemeral=False)
 
     # ── Role Whitelist Commands ──
+    class RoleWhitelistView(discord.ui.View):
+        """Role whitelist action selection view with dropdown."""
+        def __init__(self, cog, guild):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.guild = guild
+            self.action = None
+        
+        @discord.ui.select(
+            placeholder="Select Action",
+            options=create_whitelist_action_dropdown()
+        )
+        async def select_action(self, interaction: discord.Interaction, select: discord.ui.Select):
+            self.action = select.values[0]
+            
+            if self.action == "list":
+                await self.cog._show_role_whitelist_list(interaction, self.guild)
+                self.stop()
+            elif self.action in ["add", "remove"]:
+                await interaction.response.send_message(
+                    "Please select a role to add/remove with the command:\n`/rolewhitelist add/remove @role`",
+                    ephemeral=True
+                )
+                self.stop()
+
     @app_commands.command(name="rolewhitelist", description="Manage whitelisted roles - members with these roles won't be punished (Admin only)")
-    @app_commands.describe(
-        action="add, remove, or list",
-        role="Role to add/remove",
-        reason="Reason for whitelisting",
-    )
     @mod_rate_limit(rate=10, per=60)  # 10 per minute
-    async def rolewhitelist(
-        self,
-        interaction: discord.Interaction,
-        action: str,
-        role: discord.Role = None,
-        reason: str = "Staff role",
-    ):
+    async def rolewhitelist(self, interaction: discord.Interaction):
+        """Role whitelist with dropdown menu."""
         if not await self._is_admin(interaction):
             return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
-
+        
         guild = interaction.guild
-        action_l = action.lower().strip()
+        view = self.RoleWhitelistView(self, guild)
+        embed = discord.Embed(
+            title="👥 Role Whitelist",
+            description="Select an action to manage whitelisted roles (members won't be punished).",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Add", value="Add a role to the whitelist (members with role won't be punished)", inline=False)
+        embed.add_field(name="Remove", value="Remove a role from the whitelist", inline=False)
+        embed.add_field(name="View List", value="View all whitelisted roles", inline=False)
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-        if action_l == "add":
-            if not role:
-                return await interaction.response.send_message(embed=error_embed("Provide a role."), ephemeral=True)
-            
-            await add_role_whitelist(guild.id, role.id, interaction.user.id, reason)
-            await log_action(
-                guild.id,
-                "role_whitelist_add",
-                role.id,
-                {"reason": reason, "added_by": interaction.user.id},
-            )
-            return await interaction.response.send_message(
-                embed=success_embed("Role Whitelisted", f"{role.mention} is now whitelisted. Members with this role won't be punished by antinuke.\n**Reason:** {reason}"),
-                ephemeral=False,
-            )
+    async def _add_role_to_whitelist(self, interaction: discord.Interaction, role: discord.Role, reason: str):
+        """Helper to add role to whitelist."""
+        guild = interaction.guild
+        
+        await add_role_whitelist(guild.id, role.id, interaction.user.id, reason)
+        await log_action(
+            guild.id,
+            "role_whitelist_add",
+            role.id,
+            {"reason": reason, "added_by": interaction.user.id},
+        )
+        await interaction.followup.send(
+            embed=success_embed("Role Whitelisted", f"{role.mention} is now whitelisted. Members with this role won't be punished.\n**Reason:** {reason}"),
+            ephemeral=False,
+        )
 
-        if action_l == "remove":
-            if not role:
-                return await interaction.response.send_message(embed=error_embed("Provide a role."), ephemeral=True)
-            
-            await remove_role_whitelist(guild.id, role.id)
-            await log_action(guild.id, "role_whitelist_remove", role.id, {"removed_by": interaction.user.id})
-            return await interaction.response.send_message(
-                embed=success_embed("Role Removed", f"{role.mention} removed from role whitelist."),
-                ephemeral=False,
-            )
+    async def _remove_role_from_whitelist(self, interaction: discord.Interaction, role: discord.Role):
+        """Helper to remove role from whitelist."""
+        guild = interaction.guild
+        
+        await remove_role_whitelist(guild.id, role.id)
+        await log_action(guild.id, "role_whitelist_remove", role.id, {"removed_by": interaction.user.id})
+        await interaction.followup.send(
+            embed=success_embed("Role Removed", f"{role.mention} removed from role whitelist."),
+            ephemeral=False,
+        )
 
-        if action_l == "list":
-            entries = await get_role_whitelist(guild.id)
-            if not entries:
-                return await interaction.response.send_message(embed=info_embed("Role Whitelist", "No roles whitelisted."), ephemeral=False)
+    async def _show_role_whitelist_list(self, interaction: discord.Interaction, guild):
+        """Helper to show role whitelist list."""
+        await interaction.response.defer(thinking=True)
+        
+        entries = await get_role_whitelist(guild.id)
+        if not entries:
+            await interaction.followup.send(embed=info_embed("Role Whitelist", "No roles whitelisted."), ephemeral=False)
+            return
 
-            lines = []
-            for e in entries[:20]:
-                role_obj = guild.get_role(e["role_id"])
-                name = role_obj.mention if role_obj else f"<@&{e['role_id']}>"
-                reason_text = e.get("reason", "No reason")
-                lines.append(f"{name} — `{reason_text}`")
+        lines = []
+        for e in entries[:20]:
+            role = guild.get_role(e["role_id"])
+            name = role.mention if role else f"<@&{e['role_id']}>"
+            reason_text = e.get("reason", "No reason")
+            added_by = guild.get_member(e.get("added_by", 0))
+            added_text = added_by.mention if added_by else "Unknown"
+            lines.append(f"{name} — `{reason_text}` (Added by {added_text})")
 
-            embed = info_embed("Whitelisted Roles", "\n".join(lines))
-            embed.add_field(name="Note", value="Members with whitelisted roles are immune to antinuke punishments.", inline=False)
-            return await interaction.response.send_message(embed=embed, ephemeral=False)
-
-        return await interaction.response.send_message(embed=error_embed("Use: `add`, `remove`, or `list`."), ephemeral=True)
+        embed = discord.Embed(
+            title="👥 Whitelisted Roles",
+            description="\n".join(lines) if lines else "No roles whitelisted.",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Note", value="Members with these roles won't be punished by antinuke.", inline=False)
+        embed.set_footer(text=f"Total: {len(entries)} role(s)")
+        
+        await interaction.followup.send(embed=embed, ephemeral=False)
 
     # ── Enhanced Logging Commands ──
     @app_commands.command(name="setchannellog", description="Set channel for logging message edits/deletions (Admin only)")

@@ -20,21 +20,105 @@ from utils.embeds import (
 )
 from utils.rate_limiter import rate_limit_cooldown
 from utils.validation import ValidationUtils, ValidationError
+from utils.dropdowns import create_reason_dropdown, create_duration_dropdown
+from utils.embed_templates import action_confirmation_embed, moderation_result_embed
 
 
 class Moderation(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    # ── Ban Modal & View ──
+    class BanConfirmationModal(discord.ui.Modal, title="Confirm Ban"):
+        reason = discord.ui.TextInput(label="Reason", placeholder="Enter ban reason", required=True, style=discord.TextStyle.paragraph)
+        delete_days = discord.ui.TextInput(label="Delete Days (0-7)", placeholder="Number of days to delete messages (0-7)", required=False, default="0", max_length=1)
+        
+        async def on_submit(self, interaction: discord.Interaction):
+            await interaction.response.defer(ephemeral=True)
+            reason = self.reason.value or "No reason"
+            delete_days = int(self.delete_days.value or "0")
+            # This will be handled by the parent
+            interaction.custom_id = f"{reason}|{delete_days}"
+
+    class BanView(discord.ui.View):
+        def __init__(self, cog, target_user):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.target_user = target_user
+        
+        @discord.ui.select(
+            placeholder="Select Reason",
+            options=create_reason_dropdown(context="moderation")
+        )
+        async def select_reason(self, interaction: discord.Interaction, select: discord.ui.Select):
+            reason = select.values[0]
+            
+            if reason == "custom":
+                # Open modal for custom reason
+                modal = self.cog.BanConfirmationModal()
+                modal.custom_id = f"custom|{self.target_user.id}"
+                await interaction.response.send_modal(modal)
+            else:
+                # Show confirmation with selected reason
+                embed = action_confirmation_embed(
+                    action_type="Ban",
+                    target=self.target_user.mention,
+                    details={
+                        "Reason": reason,
+                        "Duration": "Permanent"
+                    },
+                    warning="⚠️ This action is permanent. The user will not be able to rejoin without a new invite."
+                )
+                
+                view = self.cog.BanConfirmView(self.cog, self.target_user, reason, 0)
+                await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            
+            self.stop()
+
+    class BanConfirmView(discord.ui.View):
+        def __init__(self, cog, target_user, reason, delete_days):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.target_user = target_user
+            self.reason = reason
+            self.delete_days = delete_days
+        
+        @discord.ui.button(label="✅ Confirm Ban", style=discord.ButtonStyle.danger)
+        async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await self.cog._execute_ban(interaction, self.target_user, self.reason, self.delete_days)
+            self.stop()
+        
+        @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+        async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.edit_message(content="❌ Ban cancelled", embed=None, view=None)
+            self.stop()
+
+    async def _execute_ban(self, interaction: discord.Interaction, user: discord.Member, reason: str, delete_days: int):
+        """Execute the ban action."""
+        try:
+            await interaction.guild.ban(user, reason=f"{interaction.user}: {reason}", delete_message_days=delete_days)
+            await log_action(interaction.guild.id, "ban", user.id, {"reason": reason, "moderator": interaction.user.id})
+            
+            embed = moderation_result_embed(
+                action="Ban",
+                target=user.mention,
+                moderator=interaction.user.mention,
+                reason=reason,
+                success=True
+            )
+            embed.set_footer(text=f"ID: {user.id} • Action by {interaction.user.display_name}")
+            await interaction.followup.send(embed=embed, ephemeral=False)
+            
+        except Exception as e:
+            embed = error_embed(f"Failed to ban: {str(e)}")
+            await interaction.followup.send(embed=embed, ephemeral=False)
+
     # ── Ban ──
     @app_commands.command(name="ban", description="Ban a user from the server")
-    @rate_limit_cooldown(rate=5, per=60)  # 5 bans per minute
-    @app_commands.describe(
-        user="User to ban",
-        reason="Reason for ban",
-        delete_days="Message history to delete (0-7)",
-    )
-    async def ban(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason", delete_days: int = 0):
+    @app_commands.describe(user="User to ban")
+    @rate_limit_cooldown(rate=5, per=60)
+    async def ban(self, interaction: discord.Interaction, user: discord.Member):
+        """Ban command with reason dropdown."""
         if not interaction.user.guild_permissions.ban_members and interaction.user.id != OWNER_ID:
             return await interaction.response.send_message(embed=error_embed("You need Ban Members permission."), ephemeral=True)
         if user.top_role >= interaction.user.top_role and interaction.user.id != OWNER_ID:
@@ -42,20 +126,16 @@ class Moderation(commands.Cog):
         if user.id == self.bot.user.id:
             return await interaction.response.send_message(embed=error_embed("I cannot ban myself."), ephemeral=True)
 
-        delete_days = max(0, min(7, delete_days))
-        try:
-            await interaction.guild.ban(user, reason=f"{interaction.user}: {reason}", delete_message_days=delete_days)
-            await log_action(interaction.guild.id, "ban", user.id, {"reason": reason, "moderator": interaction.user.id})
-            await interaction.response.send_message(
-                embed=mod_action_embed("Ban", interaction.user, user, reason, 0xFF4444),
-                ephemeral=False,
-            )
-        except discord.Forbidden:
-            return await interaction.response.send_message(embed=error_embed("I don't have permission to ban this user (higher role hierarchy)."), ephemeral=True)
-        except discord.HTTPException as e:
-            return await interaction.response.send_message(embed=error_embed(f"HTTP error: {e}"), ephemeral=True)
-        except Exception as e:
-            return await interaction.response.send_message(embed=error_embed(f"Failed to ban user: {e}"), ephemeral=True)
+        view = self.BanView(self, user)
+        embed = discord.Embed(
+            title="⚡ Ban User",
+            description=f"Select a reason for banning {user.mention}",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Target", value=user.mention, inline=False)
+        embed.add_field(name="Warning", value="⚠️ This action is permanent. The user will not be able to rejoin without a new invite.", inline=False)
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     # ── Unban ──
     @app_commands.command(name="unban", description="Unban a user by ID")

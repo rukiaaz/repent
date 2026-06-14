@@ -433,14 +433,19 @@ async def init_db():
             PRIMARY KEY (guild_id, channel_id)
         )""",
 
-        # Guild snapshots for auto-restore
+        # Guild snapshots for auto-restore (enhanced with versioning and protection)
         """CREATE TABLE IF NOT EXISTS guild_snapshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
             timestamp TEXT DEFAULT '',
             guild_name TEXT DEFAULT '',
             guild_icon TEXT DEFAULT '',
-            data TEXT DEFAULT '{}'
+            data TEXT DEFAULT '{}',
+            version INTEGER DEFAULT 1,
+            checksum TEXT,
+            is_protected INTEGER DEFAULT 0,
+            trigger_event TEXT,
+            previous_snapshot_id INTEGER
         )""",
 
         # Track which announcements have been sent to which guilds
@@ -1530,19 +1535,42 @@ async def delete_cached_channel(guild_id: int, channel_id: int):
 
 # Snapshot management functions
 @with_retry(max_retries=5, backoff_factor=0.3)
-async def create_snapshot(guild_id: int, data: Dict[str, Any]) -> int:
+async def create_snapshot(
+    guild_id: int,
+    data: Dict[str, Any],
+    is_protected: int = 0,
+    trigger_event: str = "manual",
+    previous_snapshot_id: int = None
+) -> int:
     """Create a new snapshot for a guild with current state."""
+    import hashlib
+    
     db = await _get_db()
+    
+    # Calculate checksum for tamper detection
+    data_json = json.dumps(data)
+    checksum = hashlib.sha256(data_json.encode()).hexdigest()
+    
+    # Get previous snapshot if not provided
+    if previous_snapshot_id is None:
+        snapshots = await get_snapshots(guild_id, limit=1)
+        if snapshots:
+            previous_snapshot_id = snapshots[0].get('id')
+    
     snapshot_id = await db.execute(
         """INSERT INTO guild_snapshots 
-           (guild_id, timestamp, guild_name, guild_icon, data) 
-           VALUES (?, ?, ?, ?, ?)""",
+           (guild_id, timestamp, guild_name, guild_icon, data, version, checksum, is_protected, trigger_event, previous_snapshot_id) 
+           VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)""",
         (
             guild_id,
             _now(),
             data.get('guild_name', ''),
             data.get('guild_icon', ''),
-            json.dumps(data)
+            data_json,
+            checksum,
+            is_protected,
+            trigger_event,
+            previous_snapshot_id
         ),
     )
     await db.commit()
@@ -1551,13 +1579,18 @@ async def create_snapshot(guild_id: int, data: Dict[str, Any]) -> int:
 
 
 @with_retry(max_retries=5, backoff_factor=0.3)
-async def get_snapshots(guild_id: int) -> List[Dict[str, Any]]:
-    """Get all snapshots for a guild."""
+async def get_snapshots(guild_id: int, limit: int = None) -> List[Dict[str, Any]]:
+    """Get all snapshots for a guild, optionally limited."""
     db = await _get_db()
-    rows = await db.execute(
-        "SELECT * FROM guild_snapshots WHERE guild_id = ? ORDER BY timestamp DESC",
-        (guild_id,)
-    )
+    
+    query = "SELECT * FROM guild_snapshots WHERE guild_id = ? ORDER BY timestamp DESC"
+    params = (guild_id,)
+    
+    if limit:
+        query += " LIMIT ?"
+        params = (guild_id, limit)
+    
+    rows = await db.execute(query, params)
     rows = await rows.fetchall()
     await _release_db(db)
     return [dict(r) for r in rows]
@@ -1580,8 +1613,20 @@ async def get_latest_snapshot(guild_id: int) -> Optional[Dict[str, Any]]:
 
 @with_retry(max_retries=5, backoff_factor=0.3)
 async def delete_snapshot(snapshot_id: int) -> bool:
-    """Delete a specific snapshot by ID."""
+    """Delete a specific snapshot by ID (only if not protected)."""
     db = await _get_db()
+    
+    # Check if snapshot is protected
+    snapshot = await db.execute(
+        "SELECT is_protected FROM guild_snapshots WHERE id = ?",
+        (snapshot_id,)
+    )
+    snapshot = await snapshot.fetchone()
+    
+    if snapshot and snapshot[0] == 1:
+        await _release_db(db)
+        return False  # Cannot delete protected snapshots
+    
     await db.execute(
         "DELETE FROM guild_snapshots WHERE id = ?",
         (snapshot_id,),
@@ -1589,6 +1634,120 @@ async def delete_snapshot(snapshot_id: int) -> bool:
     await db.commit()
     await _release_db(db)
     return True
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def get_snapshot_by_version(guild_id: int, version: int) -> Optional[Dict[str, Any]]:
+    """Get a specific snapshot by version."""
+    db = await _get_db()
+    rows = await db.execute(
+        "SELECT * FROM guild_snapshots WHERE guild_id = ? AND version = ? ORDER BY timestamp DESC LIMIT 1",
+        (guild_id, version)
+    )
+    rows = await rows.fetchall()
+    await _release_db(db)
+    if rows:
+        return dict(rows[0])
+    return None
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def select_best_snapshot(guild_id: int, attack_timestamp: str = None) -> Optional[Dict[str, Any]]:
+    """Select the best snapshot to restore from based on attack time.
+    
+    If attack_timestamp is provided, find the snapshot closest to but BEFORE the attack.
+    Otherwise, return the latest snapshot.
+    """
+    db = await _get_db()
+    
+    if attack_timestamp:
+        # Find snapshot before attack_timestamp
+        rows = await db.execute(
+            "SELECT * FROM guild_snapshots WHERE guild_id = ? AND timestamp < ? ORDER BY timestamp DESC LIMIT 1",
+            (guild_id, attack_timestamp)
+        )
+        rows = await rows.fetchall()
+        if rows:
+            await _release_db(db)
+            return dict(rows[0])
+    
+    # Fall back to latest snapshot
+    rows = await db.execute(
+        "SELECT * FROM guild_snapshots WHERE guild_id = ? ORDER BY timestamp DESC LIMIT 1",
+        (guild_id,)
+    )
+    rows = await rows.fetchall()
+    await _release_db(db)
+    if rows:
+        return dict(rows[0])
+    return None
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def verify_snapshot_checksum(snapshot_id: int) -> bool:
+    """Verify that a snapshot's checksum matches its data (tamper detection)."""
+    import hashlib
+    
+    db = await _get_db()
+    row = await db.execute(
+        "SELECT checksum, data FROM guild_snapshots WHERE id = ?",
+        (snapshot_id,)
+    )
+    row = await row.fetchone()
+    await _release_db(db)
+    
+    if not row:
+        return False
+    
+    stored_checksum, data = row
+    actual_checksum = hashlib.sha256(data.encode()).hexdigest()
+    
+    return stored_checksum == actual_checksum
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def cleanup_old_snapshots(guild_id: int, keep_count: int = 35, keep_protected: bool = True) -> int:
+    """Delete old snapshots, keeping only the most recent keep_count snapshots.
+    
+    Protected snapshots are always kept if keep_protected is True.
+    Returns the number of snapshots deleted.
+    """
+    db = await _get_db()
+    
+    # Get all snapshots
+    if keep_protected:
+        rows = await db.execute(
+            "SELECT id, is_protected FROM guild_snapshots WHERE guild_id = ? ORDER BY timestamp DESC",
+            (guild_id,)
+        )
+    else:
+        rows = await db.execute(
+            "SELECT id, is_protected FROM guild_snapshots WHERE guild_id = ? ORDER BY timestamp DESC",
+            (guild_id,)
+        )
+    
+    rows = await rows.fetchall()
+    all_snapshots = [dict(r) for r in rows]
+    
+    # Separate protected and unprotected
+    protected = [s for s in all_snapshots if s['is_protected'] == 1]
+    unprotected = [s for s in all_snapshots if s['is_protected'] == 0]
+    
+    # Keep only keep_count unprotected snapshots
+    to_delete = unprotected[keep_count:] if len(unprotected) > keep_count else []
+    
+    deleted_count = 0
+    for snapshot in to_delete:
+        await db.execute(
+            "DELETE FROM guild_snapshots WHERE id = ?",
+            (snapshot['id'],)
+        )
+        deleted_count += 1
+    
+    await db.commit()
+    await _release_db(db)
+    
+    return deleted_count
 
 
 # Sent announcement tracking functions

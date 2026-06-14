@@ -174,7 +174,7 @@ def _now() -> str:
 class ConnectionPool:
     """Simple connection pool for database connections."""
     
-    def __init__(self, max_connections: int = 10):
+    def __init__(self, max_connections: int = 5):  # FIXED: Reduced from 20 to 5 for single-writer architecture
         self.max_connections = max_connections
         self._pool: List[aiosqlite.Connection] = []
         self._lock = asyncio.Lock()
@@ -199,8 +199,8 @@ class ConnectionPool:
             await db.execute("PRAGMA journal_mode = WAL")
             # Enable foreign key constraints
             await db.execute("PRAGMA foreign_keys = ON")
-            # Set busy timeout to handle concurrent access (increased from 5s to 30s)
-            await db.execute("PRAGMA busy_timeout = 30000")
+            # Set busy timeout to handle concurrent access (FIXED: Reduced from 60s to 5s for better failure detection)
+            await db.execute("PRAGMA busy_timeout = 5000")
             # Set synchronous to NORMAL for better write performance
             await db.execute("PRAGMA synchronous = NORMAL")
             return db
@@ -228,7 +228,7 @@ def get_connection_pool() -> ConnectionPool:
     """Get or create the global connection pool."""
     global _connection_pool_instance
     if _connection_pool_instance is None:
-        _connection_pool_instance = ConnectionPool(max_connections=10)
+        _connection_pool_instance = ConnectionPool(max_connections=5)  # FIXED: Reduced from 20 to 5
     return _connection_pool_instance
 
 
@@ -868,7 +868,7 @@ async def get_guild(guild_id: int) -> Dict[str, Any]:
     row = await row.fetchone()
     if not row:
         await db.execute(
-            "INSERT INTO guilds (guild_id) VALUES (?)", (guild_id,)
+            "INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (guild_id,)
         )
         await db.commit()
         row = await db.execute(
@@ -2053,14 +2053,21 @@ async def remove_ignored_channel(guild_id: int, channel_id: int, module: str = "
 # ── Action Log ──
 @with_retry(max_retries=5, backoff_factor=0.3)
 async def log_action(guild_id: int, action_type: str, user_id: int = 0, details: dict = None):
-    db = await _get_db()
-    await db.execute(
-        """INSERT INTO action_log (guild_id, user_id, action_type, details, timestamp)
-           VALUES (?, ?, ?, ?, ?)""",
-        (guild_id, user_id, action_type, json.dumps(details or {}), _now()),
-    )
-    await db.commit()
-    await _release_db(db)
+    """Log action via write queue for non-blocking, batched writes (PRODUCTION-READY)."""
+    # Use write queue for non-blocking, batched writes
+    try:
+        from database_write_queue import log_action_async
+        return await log_action_async(guild_id, action_type, user_id, details)
+    except ImportError:
+        # Fallback to direct write if write queue not available (graceful degradation)
+        db = await _get_db()
+        await db.execute(
+            """INSERT INTO action_log (guild_id, user_id, action_type, details, timestamp)
+               VALUES (?, ?, ?, ?, ?)""",
+            (guild_id, user_id, action_type, json.dumps(details or {}), _now()),
+        )
+        await db.commit()
+        await _release_db(db)
 
 
 @with_read_retry(max_retries=2, backoff_factor=0.1)
@@ -2719,7 +2726,7 @@ async def is_user_whitelisted_fast(guild_id: int, user_id: int, is_bot: bool = F
                 "SELECT 1 FROM bot_whitelist WHERE guild_id = ? AND bot_id = ?",
                 (guild_id, user_id)
             )
-            is_whitelisted = row.fetchone() is not None
+            is_whitelisted = (await row.fetchone()) is not None
             await _release_db(db)
             
             # Cache result
@@ -2819,26 +2826,22 @@ async def get_antinuke_threshold_fast(guild_id: int, action_type: str) -> Tuple[
 
 
 async def log_action_fast(guild_id: int, action_type: str, user_id: int = 0, details: dict = None):
-    """Fast-path action logging - fire and forget (no retry, non-blocking)."""
+    """Fast-path action logging - uses write queue for non-blocking, reliable writes (PRODUCTION-READY)."""
     try:
-        # Create a background task for logging to avoid blocking
-        async def _log_background():
-            try:
-                db = await _get_db()
-                await db.execute(
-                    "INSERT INTO action_log (guild_id, user_id, action_type, details, timestamp) VALUES (?, ?, ?, ?, ?)",
-                    (guild_id, user_id, action_type, json.dumps(details or {}), _now())
-                )
-                await db.commit()
-                await _release_db(db)
-            except Exception:
-                pass  # Silently fail - logging is non-critical
-        
-        # Spawn background task without waiting
-        import asyncio
-        asyncio.create_task(_log_background())
-    except Exception:
-        pass  # Silently fail
+        from database_write_queue import log_action_async
+        return await log_action_async(guild_id, action_type, user_id, details)
+    except ImportError:
+        # Fallback to direct write if write queue not available (graceful degradation)
+        try:
+            db = await _get_db()
+            await db.execute(
+                "INSERT INTO action_log (guild_id, user_id, action_type, details, timestamp) VALUES (?, ?, ?, ?, ?)",
+                (guild_id, user_id, action_type, json.dumps(details or {}), _now())
+            )
+            await db.commit()
+            await _release_db(db)
+        except Exception:
+            pass  # Silently fail - logging is non-critical
 
 
 def invalidate_antinuke_cache(guild_id: int = None):

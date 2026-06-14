@@ -123,69 +123,7 @@ class CircuitBreaker:
 _read_circuit_breaker = CircuitBreaker(failure_threshold=3, recovery_timeout=30)
 
 
-# Connection pool for database operations
-class ConnectionPool:
-    """Thread-safe connection pool for high-performance database access."""
-    
-    def __init__(self, pool_size: int = 10):
-        """
-        Initialize connection pool.
-        
-        Args:
-            pool_size: Number of connections in the pool
-        """
-        self.pool_size = pool_size
-        self._connections: List[aiosqlite.Connection] = []
-        self._available: asyncio.Queue = asyncio.Queue(maxsize=pool_size)
-        self._lock = asyncio.Lock()
-        self._initialized = False
-    
-    async def initialize(self):
-        """Initialize the connection pool."""
-        if self._initialized:
-            return
-        
-        async with self._lock:
-            if self._initialized:
-                return
-            
-            for _ in range(self.pool_size):
-                db = aiosqlite.connect(DB_PATH, check_same_thread=False)
-                await db.execute("PRAGMA journal_mode=WAL")
-                await db.execute("PRAGMA synchronous=NORMAL")
-                await db.commit()
-                self._connections.append(db)
-                await self._available.put(db)
-            
-            self._initialized = True
-    
-    async def acquire(self) -> aiosqlite.Connection:
-        """Acquire a connection from the pool."""
-        await self.initialize()
-        return await self._available.get()
-    
-    async def release(self, db: aiosqlite.Connection):
-        """Release a connection back to the pool."""
-        await self._available.put(db)
-    
-    async def close_all(self):
-        """Close all connections in the pool."""
-        async with self._lock:
-            for db in self._connections:
-                await db.close()
-            self._connections.clear()
-            self._initialized = False
 
-
-# Global connection pool
-_connection_pool: ConnectionPool = None
-
-def get_connection_pool() -> ConnectionPool:
-    """Get the global connection pool."""
-    global _connection_pool
-    if _connection_pool is None:
-        _connection_pool = ConnectionPool(pool_size=10)
-    return _connection_pool
 
 # Cache layer import (will be initialized later)
 _cache_layer = None
@@ -284,14 +222,14 @@ class ConnectionPool:
 
 
 # Global connection pool
-_connection_pool: Optional[ConnectionPool] = None
+_connection_pool_instance: Optional[ConnectionPool] = None
 
 def get_connection_pool() -> ConnectionPool:
     """Get or create the global connection pool."""
-    global _connection_pool
-    if _connection_pool is None:
-        _connection_pool = ConnectionPool(max_connections=10)
-    return _connection_pool
+    global _connection_pool_instance
+    if _connection_pool_instance is None:
+        _connection_pool_instance = ConnectionPool(max_connections=10)
+    return _connection_pool_instance
 
 
 async def _get_db() -> aiosqlite.Connection:

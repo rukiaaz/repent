@@ -224,10 +224,10 @@ class Antinuke(commands.Cog):
         self._audit_log_rate_limit = 5  # 5 queries per second per guild (increased from 1)
         self._audit_log_burst_size = 10  # Allow burst of 10 queries
         
-        # Discord API rate limit tracking (global buckets)
+        # Discord API rate limit tracking (global buckets) - OPTIMIZED FOR MAXIMUM SECURITY
         self._discord_api_buckets = {
             "guild": {"tokens": 50, "last_update": time.time(), "rate": 50, "window": 1},  # 50 requests per second
-            "webhook": {"tokens": 5, "last_update": time.time(), "rate": 5, "window": 1},  # 5 requests per second
+            "webhook": {"tokens": 10, "last_update": time.time(), "rate": 10, "window": 1},  # Increased to 10 for faster webhook deletion
         }
         
         # Graceful degradation: component health status
@@ -240,6 +240,23 @@ class Antinuke(commands.Cog):
         
         # Fallback mode flags
         self._fallback_mode = False
+        
+        # MAXIMUM SECURITY: Zero-tolerance actions (instant punishment regardless of whitelist)
+        self._zero_tolerance_actions = {
+            "webhook_create", "webhook_delete",  # Webhook threats are critical
+            "bot_add",  # Adding unknown bots is high risk
+            "guild_update",  # Server settings changes
+        }
+        
+        # Enhanced security: Suspicious patterns for immediate action
+        self._suspicious_patterns = {
+            "mass_channel_delete": {"threshold": 2, "window": 5},  # 2+ channels in 5 seconds
+            "mass_role_delete": {"threshold": 2, "window": 5},  # 2+ roles in 5 seconds
+            "mass_ban": {"threshold": 3, "window": 10},  # 3+ bans in 10 seconds
+        }
+        
+        # Security: Track recent guild-wide events for pattern detection
+        self._guild_security_events: Dict[int, deque] = {}  # guild_id -> deque of security events
 
     def _get_guild_lock(self, guild_id: int) -> asyncio.Lock:
         self._locks.setdefault(guild_id, asyncio.Lock())
@@ -467,6 +484,70 @@ class Antinuke(commands.Cog):
     def _set_cached_safe_admins(self, guild_id: int, safe_admins_list: List[int], settings_json: str) -> None:
         """Cache safe admins list with current settings and timestamp."""
         self._safe_admins_cache[guild_id] = (safe_admins_list, settings_json, datetime.now(timezone.utc))
+    
+    def _track_security_event(self, guild_id: int, user_id: int, action_type: str) -> Dict[str, Any]:
+        """Track security event for pattern detection."""
+        if guild_id not in self._guild_security_events:
+            self._guild_security_events[guild_id] = deque(maxlen=1000)
+        
+        event = {
+            "user_id": user_id,
+            "action_type": action_type,
+            "timestamp": datetime.now(timezone.utc)
+        }
+        self._guild_security_events[guild_id].append(event)
+        
+        # Check for suspicious patterns
+        return self._detect_suspicious_patterns(guild_id, user_id, action_type)
+    
+    def _detect_suspicious_patterns(self, guild_id: int, user_id: int, action_type: str) -> Dict[str, Any]:
+        """Detect suspicious attack patterns."""
+        if guild_id not in self._guild_security_events:
+            return {"is_suspicious": False}
+        
+        events = self._guild_security_events[guild_id]
+        now = datetime.now(timezone.utc)
+        
+        # Check each suspicious pattern
+        for pattern_name, pattern_config in self._suspicious_patterns.items():
+            threshold = pattern_config["threshold"]
+            window = pattern_config["window"]
+            
+            # Count recent events matching the pattern
+            if pattern_name == "mass_channel_delete" and action_type == "channel_delete":
+                recent_count = sum(1 for e in events if e["action_type"] == "channel_delete" and (now - e["timestamp"]).total_seconds() <= window)
+                if recent_count >= threshold:
+                    return {
+                        "is_suspicious": True,
+                        "pattern": pattern_name,
+                        "count": recent_count,
+                        "threshold": threshold,
+                        "window": window
+                    }
+            
+            elif pattern_name == "mass_role_delete" and action_type == "role_delete":
+                recent_count = sum(1 for e in events if e["action_type"] == "role_delete" and (now - e["timestamp"]).total_seconds() <= window)
+                if recent_count >= threshold:
+                    return {
+                        "is_suspicious": True,
+                        "pattern": pattern_name,
+                        "count": recent_count,
+                        "threshold": threshold,
+                        "window": window
+                    }
+            
+            elif pattern_name == "mass_ban" and action_type == "ban":
+                recent_count = sum(1 for e in events if e["action_type"] == "ban" and (now - e["timestamp"]).total_seconds() <= window)
+                if recent_count >= threshold:
+                    return {
+                        "is_suspicious": True,
+                        "pattern": pattern_name,
+                        "count": recent_count,
+                        "threshold": threshold,
+                        "window": window
+                    }
+        
+        return {"is_suspicious": False}
 
     def _is_event_processed(self, guild_id: int, user_id: int, action_type: str, target_id: int) -> bool:
         """Check if an event has already been processed to prevent duplicate punishment."""
@@ -645,7 +726,7 @@ class Antinuke(commands.Cog):
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
             try:
-                await asyncio.sleep(300)  # Clean up every 5 minutes
+                await asyncio.sleep(600)  # Clean up every 10 minutes (OPTIMIZED from 5 minutes)
                 cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)  # Remove entries older than 30 minutes
                 old_entries = [eid for eid, timestamp in self._processed_entries.items() if timestamp < cutoff]
                 for eid in old_entries:
@@ -715,6 +796,15 @@ class Antinuke(commands.Cog):
                     del self._processed_events[key]
                 if old_event_keys:
                     self.logger.debug(f"Cleaned up {len(old_event_keys)} old processed events")
+                
+                # OPTIMIZED: Clean up security events tracking
+                security_cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)  # 15 minutes
+                for guild_id, events in self._guild_security_events.items():
+                    old_security_events = [e for e in events if (datetime.now(timezone.utc) - e["timestamp"]).total_seconds() > 900]
+                    for e in old_security_events:
+                        events.remove(e)
+                if old_security_events:
+                    self.logger.debug(f"Cleaned up {len(old_security_events)} old security events")
                 
                 # Clean up audit log rate limiter (remove entries older than 5 minutes for token bucket)
                 audit_log_cutoff = datetime.now(timezone.utc).timestamp() - 300  # 5 minutes
@@ -966,16 +1056,76 @@ class Antinuke(commands.Cog):
                 self.logger.security("WEBHOOK_CLEANUP", f"Deleted {deleted_count} webhooks created by user {user_id}", user_id=user_id)
         except Exception:
             pass
+    
+    async def _trigger_emergency_mode(self, guild: discord.Guild, reason: str) -> None:
+        """Trigger emergency mode for maximum security during attacks."""
+        async with self._lock:
+            if guild.id in self._emergency_mode_active:
+                return  # Already in emergency mode
+            
+            self._emergency_mode_active.add(guild.id)
+            self._attack_detected_time[guild.id] = datetime.now(timezone.utc)
+        
+        self.logger.security("EMERGENCY_MODE", f"Emergency mode activated for guild {guild.id}. Reason: {reason}", guild_id=guild.id)
+        
+        # Log emergency mode activation
+        try:
+            settings = await get_guild(guild.id)
+            log_ch_id = settings.get("log_channel", 0)
+            if log_ch_id:
+                ch = guild.get_channel(log_ch_id)
+                if ch:
+                    embed = discord.Embed(
+                        title="🚨 EMERGENCY MODE ACTIVATED",
+                        description=f"Suspicious attack pattern detected!\n\n**Reason:** {reason}\n\n**Security Measures Active:**\n"
+                                    f"• Enhanced rate limiting bypassed\n"
+                                    f"• Zero-tolerance enforcement active\n"
+                                    f"• All webhooks being monitored\n"
+                                    f"• Immediate punishment for suspicious actions",
+                        color=0xFF0000
+                    )
+                    embed.set_footer(text="Repent Maximum Security")
+                    embed.timestamp = datetime.now(timezone.utc)
+                    await ch.send(embed=embed)
+        except Exception:
+            pass
+        
+        # Schedule emergency mode cleanup after 10 minutes
+        asyncio.create_task(self._cleanup_emergency_mode(guild.id))
+    
+    async def _cleanup_emergency_mode(self, guild_id: int) -> None:
+        """Clean up emergency mode after a timeout."""
+        await asyncio.sleep(600)  # 10 minutes
+        
+        async with self._lock:
+            if guild_id in self._emergency_mode_active:
+                # Check if it's been at least 10 minutes since attack detection
+                if guild_id in self._attack_detected_time:
+                    if datetime.now(timezone.utc) - self._attack_detected_time[guild_id] > timedelta(minutes=10):
+                        self._emergency_mode_active.remove(guild_id)
+                        del self._attack_detected_time[guild_id]
+                        self.logger.security("EMERGENCY_MODE", f"Emergency mode deactivated for guild {guild_id}", guild_id=guild_id)
 
     async def _handle_violation(self, guild: discord.Guild, user_id: int, action_type: str, target_desc: str = "") -> None:
+        # MAXIMUM SECURITY: Track security event for pattern detection
+        pattern_result = self._track_security_event(guild.id, user_id, action_type)
+        
+        # MAXIMUM SECURITY: Zero-tolerance actions bypass whitelist for critical threats
+        is_zero_tolerance = action_type in self._zero_tolerance_actions
+        is_suspicious_pattern = pattern_result.get("is_suspicious", False)
+        
         # Security: Check whitelist BEFORE acquiring lock to prevent TOCTOU race condition
-        if await self._is_whitelisted(guild.id, user_id):
-            return
+        # EXCEPT for zero-tolerance actions and suspicious patterns
+        if not is_zero_tolerance and not is_suspicious_pattern:
+            if await self._is_whitelisted(guild.id, user_id):
+                return
         
         async with self._get_guild_lock(guild.id):
             # Double-check whitelist inside lock for absolute safety
-            if await self._is_whitelisted(guild.id, user_id):
-                return
+            # EXCEPT for zero-tolerance actions and suspicious patterns
+            if not is_zero_tolerance and not is_suspicious_pattern:
+                if await self._is_whitelisted(guild.id, user_id):
+                    return
 
             settings = await get_guild(guild.id)
             if not settings.get("antinuke_enabled", 1):
@@ -991,13 +1141,29 @@ class Antinuke(commands.Cog):
                 except Exception:
                     return
 
-            punishment = settings.get("punishment", DEFAULT_PUNISHMENT)
-            reason = f"[Repent Antinuke] {action_type} threshold exceeded"
+            # MAXIMUM SECURITY: Enhanced punishment based on threat level
+            if is_suspicious_pattern:
+                punishment = "ban"  # Maximum punishment for suspicious patterns
+                reason = f"[Repent Antinuke] CRITICAL: Suspicious pattern detected - {pattern_result.get('pattern', 'unknown')}. Action: {action_type}"
+                self.logger.security("SUSPICIOUS_PATTERN", f"Pattern: {pattern_result.get('pattern')}, Count: {pattern_result.get('count')}", guild_id=guild.id, user_id=user_id)
+            elif is_zero_tolerance:
+                punishment = "ban"  # Maximum punishment for zero-tolerance actions
+                reason = f"[Repent Antinuke] CRITICAL: Zero-tolerance action - {action_type}"
+                self.logger.security("ZERO_TOLERANCE", f"Action: {action_type}", guild_id=guild.id, user_id=user_id)
+            else:
+                punishment = settings.get("punishment", DEFAULT_PUNISHMENT)
+                reason = f"[Repent Antinuke] {action_type} threshold exceeded"
 
             await self._apply_punishment(guild, member, punishment, reason)
             await add_punished_user(guild.id, user_id, reason, self.bot.user.id if self.bot.user else 0, punishment)
-
-            await self._delete_all_user_webhooks(guild, user_id)
+            
+            # MAXIMUM SECURITY: For suspicious patterns, trigger emergency mode
+            if is_suspicious_pattern:
+                await self._trigger_emergency_mode(guild, reason)
+            
+            # MAXIMUM SECURITY: For zero-tolerance actions, clean up all webhooks
+            if action_type in ["webhook_create", "webhook_delete"]:
+                await self._delete_all_user_webhooks(guild, user_id)
 
             await log_action_fast(
                 guild.id,

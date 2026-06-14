@@ -213,33 +213,51 @@ class Repent(commands.Bot):
 
     # ── Cache snapshot loop ──
     async def cache_snapshot_loop(self):
-        """Background task to create auto-snapshots every 5 minutes with cleanup."""
+        """Background task to create auto-snapshots every 10 minutes with cleanup (OPTIMIZED)."""
         await self.wait_until_ready()
         
         while not self.is_closed():
-            for guild in self.guilds:
-                try:
-                    # Create snapshot using the enhanced function
-                    antinuke_cog = self.get_cog('Antinuke')
-                    if antinuke_cog:
-                        success = await antinuke_cog.create_auto_snapshot(guild)
-                        if success:
-                            # Clean up old snapshots (keep only 3 most recent)
-                            await antinuke_cog.cleanup_old_snapshots(guild, keep_count=3)
-                    else:
-                        # Fallback to basic snapshot
-                        await snapshot_guild(guild)
-                except Exception as e:
-                    self.logger.error(f"Failed to snapshot guild {guild.id} in loop", exc_info=True)
-            
-            # Update presence after snapshot to keep member counts current
             try:
-                await self.update_presence()
+                # Process snapshots in batches to reduce API calls
+                snapshot_tasks = []
+                for guild in self.guilds:
+                    async def snapshot_guild_safe(guild):
+                        try:
+                            # Create snapshot using the enhanced function
+                            antinuke_cog = self.get_cog('Antinuke')
+                            if antinuke_cog:
+                                success = await antinuke_cog.create_auto_snapshot(guild)
+                                if success:
+                                    # Clean up old snapshots (keep only 3 most recent)
+                                    await antinuke_cog.cleanup_old_snapshots(guild, keep_count=3)
+                            else:
+                                # Fallback to basic snapshot
+                                await snapshot_guild(guild)
+                        except Exception as e:
+                            self.logger.error(f"Failed to snapshot guild {guild.id}", exc_info=True)
+                    
+                    snapshot_tasks.append(snapshot_guild_safe(guild))
+                
+                # Execute snapshots concurrently with rate limiting
+                if snapshot_tasks:
+                    # Process in batches of 5 to avoid API rate limits
+                    for i in range(0, len(snapshot_tasks), 5):
+                        batch = snapshot_tasks[i:i+5]
+                        await asyncio.gather(*batch, return_exceptions=True)
+                        if i + 5 < len(snapshot_tasks):
+                            await asyncio.sleep(1)  # Small delay between batches
+                
+                # Update presence after snapshot to keep member counts current
+                try:
+                    await self.update_presence()
+                except Exception as e:
+                    self.logger.error(f"Failed to update presence in snapshot loop", exc_info=True)
+                
             except Exception as e:
-                self.logger.error(f"Failed to update presence in snapshot loop", exc_info=True)
+                self.logger.error(f"Error in snapshot loop: {e}", exc_info=True)
             
-            # Wait 5 minutes before next snapshot
-            await asyncio.sleep(300)
+            # Wait 10 minutes before next snapshot (OPTIMIZED from 5 minutes)
+            await asyncio.sleep(600)
 
     # ── Error Handlers ──
     async def on_command_error(self, ctx, error):

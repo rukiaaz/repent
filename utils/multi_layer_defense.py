@@ -64,6 +64,16 @@ class ThreatLevel(Enum):
         elif isinstance(other, int):
             return self.value >= other
         return NotImplemented
+    
+    def __eq__(self, other):
+        if isinstance(other, ThreatLevel):
+            return self.value == other.value
+        elif isinstance(other, int):
+            return self.value == other
+        return NotImplemented
+    
+    def __hash__(self):
+        return hash(self.value)
 
 
 class ResponseAction(Enum):

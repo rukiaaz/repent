@@ -86,7 +86,7 @@ class CacheLayer:
         
         self._cleanup_task = None
         self._memory_usage_check_interval = 300  # Check memory every 5 minutes
-        self._memory_limit_mb = 500  # 500MB limit for cache
+        self._memory_limit_mb = 300  # REDUCED from 500MB to 300MB for better memory management (OPTIMIZED)
     
     def _get_shard(self, key: str) -> CacheShard:
         """Get the appropriate shard for a key using consistent hashing."""
@@ -165,12 +165,28 @@ class CacheLayer:
         return total_size / (1024 * 1024)  # Convert to MB
     
     async def _enforce_memory_limit(self):
-        """Enforce memory limit by evicting oldest entries if necessary."""
+        """Enforce memory limit by evicting oldest entries if necessary (OPTIMIZED)."""
         memory_usage = self._estimate_memory_usage()
         if memory_usage > self._memory_limit_mb:
-            # Clear 20% of cache to reduce memory
-            await self.clear_all()
-            print(f"Cache cleared due to memory limit: {memory_usage:.2f}MB > {self._memory_limit_mb}MB")
+            # Instead of clearing entire cache, clear old entries across all shards (OPTIMIZED)
+            tasks = []
+            for shard in self._shards:
+                async def partial_cleanup(shard):
+                    async with shard._lock:
+                        # Remove oldest 30% of entries instead of clearing all
+                        if shard._cache:
+                            sorted_keys = sorted(shard._access_order.keys(), key=lambda k: shard._access_order[k])
+                            entries_to_remove = int(len(sorted_keys) * 0.3)
+                            for key in sorted_keys[:entries_to_remove]:
+                                if key in shard._cache:
+                                    del shard._cache[key]
+                                if key in shard._access_order:
+                                    del shard._access_order[key]
+                
+                tasks.append(partial_cleanup(shard))
+            
+            await asyncio.gather(*tasks)
+            print(f"Cache partially cleaned due to memory limit: {memory_usage:.2f}MB > {self._memory_limit_mb}MB (30% cleared)")
     
     def _generate_key(self, prefix: str, *args) -> str:
         """Generate a cache key from components."""

@@ -31,6 +31,8 @@ from database import (
 )
 from utils.embeds import success_embed, error_embed, info_embed
 from utils.rate_limiter import strict_rate_limit, mod_rate_limit
+from utils.dropdowns import create_action_dropdown, create_whitelist_action_dropdown, create_trust_level_dropdown
+from utils.embed_templates import antinuke_config_embed, whitelist_list_embed, action_confirmation_embed
 
 
 class InteractiveSetupView(discord.ui.View):
@@ -491,47 +493,144 @@ class Config(commands.Cog):
 
         return await interaction.response.send_message(embed=error_embed("Unknown action."), ephemeral=True)
 
+    # ── Antinuke View ──
+    class AntinukeView(discord.ui.View):
+        """Antinuke action selection view with dropdown."""
+        def __init__(self, cog):
+            super().__init__(timeout=None)
+            self.cog = cog
+        
+        @discord.ui.select(
+            placeholder="Select Action",
+            options=create_action_dropdown(
+                enable_label="Enable Protection",
+                disable_label="Disable Protection",
+                view_label="View Status"
+            )
+        )
+        async def select_action(self, interaction: discord.Interaction, select: discord.ui.Select):
+            action = select.values[0]
+            
+            if action == "enable":
+                await self.cog._enable_antinuke_with_animation(interaction)
+            elif action == "disable":
+                await self.cog._disable_antinuke(interaction)
+            elif action == "status":
+                await self.cog._show_antinuke_status(interaction)
+            
+            # Stop the view after selection
+            self.stop()
+
     # ── Antinuke Commands ──
     @app_commands.command(name="antinuke", description="Manage antinuke settings (Admin only)")
-    @app_commands.describe(action="enable, disable, or status")
     @strict_rate_limit(rate=5, per=60)  # 5 per minute for security
-    async def antinuke(self, interaction: discord.Interaction, action: str):
+    async def antinuke(self, interaction: discord.Interaction):
         if not await self._is_admin(interaction):
             return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
+        
+        view = self.AntinukeView(self)
+        embed = discord.Embed(
+            title="🛡️ Antinuke Configuration",
+            description="Select an action to manage antinuke protection.",
+            color=0xFFFFFF
+        )
+        embed.add_field(name="Enable", value="Activate all antinuke protections", inline=False)
+        embed.add_field(name="Disable", value="Turn off antinuke protections", inline=False)
+        embed.add_field(name="View Status", value="Check current protection status and settings", inline=False)
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-        action_l = action.lower().strip()
+    async def _enable_antinuke_with_animation(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
+
+        steps = [
+            "Preparing protection checks",
+            "Updating thresholds",
+            "Warming up handlers",
+            "Finalizing…",
+        ]
+
+        for i, step in enumerate(steps, start=1):
+            await asyncio.sleep(0.5)
+            embed = info_embed("Enabling Antinuke…", f"{step} ({i}/{len(steps)})")
+            try:
+                if i == 1:
+                    message = await interaction.followup.send(embed=embed)
+                else:
+                    await message.edit(embed=embed)
+            except Exception:
+                pass
+
+        await update_guild(interaction.guild.id, antinuke_enabled=1)
+        await interaction.followup.send(
+            embed=success_embed("Antinuke Enabled", "All protection modules are now active."),
+            ephemeral=False,
+        )
+
+    async def _disable_antinuke(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
+        await update_guild(interaction.guild.id, antinuke_enabled=0)
+        await interaction.followup.send(
+            embed=success_embed("Antinuke Disabled", "⚠️ **Warning:** Your server is now unprotected!"),
+            ephemeral=False,
+        )
+
+    async def _show_antinuke_status(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
         guild = interaction.guild
+        settings = await get_guild(guild.id)
+        enabled = settings.get("antinuke_enabled", 1)
+        punishment = settings.get("punishment", "ban")
 
-        if action_l in ("enable", "on"):
-            return await self._enable_antinuke_with_animation(interaction)
+        # Get thresholds
+        thresholds = {}
+        for action_type in DEFAULT_ANTINUKE_THRESHOLDS:
+            max_count, window = await get_antinuke_threshold(guild.id, action_type)
+            thresholds[action_type] = (max_count, window)
 
-        if action_l in ("disable", "off"):
-            await update_guild(guild.id, antinuke_enabled=0)
-            return await interaction.response.send_message(
-                embed=success_embed("Antinuke Disabled", "⚠️ **Warning:** Your server is now unprotected!"),
-                ephemeral=False,
-            )
-
-        if action_l == "status":
-            settings = await get_guild(guild.id)
-            enabled = settings.get("antinuke_enabled", 1)
-            punishment = settings.get("punishment", "ban")
-
-            embed = discord.Embed(title="🛡️ Antinuke Status", color=0x4488FF)
-            embed.add_field(name="Status", value="✅ Enabled" if enabled else "❌ Disabled", inline=True)
-            embed.add_field(name="Punishment", value=f"`{punishment}`", inline=True)
-
-            lines = []
-            for action_type in DEFAULT_ANTINUKE_THRESHOLDS:
-                max_count, window = await get_antinuke_threshold(guild.id, action_type)
-                lines.append(f"`{action_type}`: {max_count}/{window}s")
-            embed.add_field(name="Thresholds", value="\n".join(lines), inline=False)
-
-            return await interaction.response.send_message(embed=embed, ephemeral=False)
-
-        return await interaction.response.send_message(embed=error_embed("Use: `enable`, `disable`, or `status`."), ephemeral=True)
+        embed = antinuke_config_embed(
+            enabled=enabled,
+            punishment=punishment,
+            thresholds=thresholds,
+            guild_name=guild.name
+        )
+        await interaction.followup.send(embed=embed, ephemeral=False)
 
     # ── Whitelist Commands ──
+    class WhitelistView(discord.ui.View):
+        """Whitelist action selection view with dropdown."""
+        def __init__(self, cog, guild):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.guild = guild
+            self.action = None
+            self.user = None
+            self.level = None
+        
+        @discord.ui.select(
+            placeholder="Select Action",
+            options=create_whitelist_action_dropdown()
+        )
+        async def select_action(self, interaction: discord.Interaction, select: discord.ui.Select):
+            self.action = select.values[0]
+            
+            if self.action == "list":
+                await self.cog._show_whitelist_list(interaction, self.guild)
+                self.stop()
+            elif self.action in ["add", "remove"]:
+                # Ask for user
+                await interaction.response.send_message(
+                    "Please mention the user to add/remove.",
+                    ephemeral=True
+                )
+                # In a full implementation, we'd wait for a message or use a modal
+                # For now, we'll tell them to use the original command
+                await interaction.followup.send(
+                    "Please use `/whitelist @user` directly for now.",
+                    ephemeral=True
+                )
+                self.stop()
+
     @app_commands.command(name="whitelist", description="Manage whitelisted users (Admin only)")
     @app_commands.describe(
         action="add, remove, or list",
@@ -546,8 +645,10 @@ class Config(commands.Cog):
         user: discord.Member = None,
         level: int = 1,
     ):
+        """Whitelist command with parameters (backward compatibility)."""
         if not await self._is_admin(interaction):
             return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
+
 
         guild = interaction.guild
         action_l = action.lower().strip()
@@ -587,22 +688,19 @@ class Config(commands.Cog):
             )
 
         if action_l == "list":
-            entries = await get_whitelist(guild.id)
-            if not entries:
-                return await interaction.response.send_message(embed=info_embed("Whitelisted Users", "No whitelisted users in this server."), ephemeral=False)
-
-            lines = []
-            for e in entries[:20]:
-                member = guild.get_member(e["user_id"])
-                name = member.mention if member else f"<@{e['user_id']}>"
-                level_name = "Full" if e["trust_level"] == 2 else "Partial"
-                lines.append(f"{name} — **{level_name}** (`{e['trust_level']}`)")
-
-            embed = info_embed("Whitelisted Users", "\n".join(lines))
-            embed.add_field(name="Note", value=f"Bot owner (`{OWNER_ID}`) is always fully whitelisted.", inline=False)
-            return await interaction.response.send_message(embed=embed, ephemeral=False)
+            await self._show_whitelist_list(interaction, guild)
+            return
 
         return await interaction.response.send_message(embed=error_embed("Use: `add`, `remove`, or `list`."), ephemeral=True)
+
+    async def _show_whitelist_list(self, interaction: discord.Interaction, guild):
+        """Show whitelist list using professional embed template."""
+        await interaction.response.defer(thinking=True)
+        
+        users = await get_whitelist(guild.id)
+        embed = whitelist_list_embed(users, guild.name)
+        
+        await interaction.followup.send(embed=embed, ephemeral=False)
 
     # ── Bot Whitelist Commands ──
     @app_commands.command(name="botwhitelist", description="Manage whitelisted bots - they won't be punished by antinuke (Admin only)")

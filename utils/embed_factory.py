@@ -185,12 +185,12 @@ class EmbedFactory:
             },
             {
                 "name": "Punishment Mode",
-                "value=f"{punishment.upper()}",
+                "value": f"{punishment.upper()}",
                 "inline": True
             },
             {
                 "name": "Protection Level",
-                "value="MAXIMUM" if enabled else "DISABLED",
+                "value": "MAXIMUM" if enabled else "DISABLED",
                 "inline": True
             },
         ]

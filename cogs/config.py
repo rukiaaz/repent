@@ -30,7 +30,6 @@ from database import (
     get_role_whitelist,
 )
 from utils.embeds import success_embed, error_embed, info_embed
-from utils.embed_factory import EmbedFactory
 from utils.rate_limiter import strict_rate_limit, mod_rate_limit
 
 
@@ -251,10 +250,31 @@ class Config(commands.Cog):
         return interaction.user.guild_permissions.administrator or interaction.user.id == OWNER_ID
 
     async def _send_config_view(self, interaction: discord.Interaction):
-        # Use premium embed factory for config dashboard
         guild = interaction.guild
         settings = await get_guild(guild.id)
-        embed = await EmbedFactory.antinuke_config(guild, settings)
+
+        whitelisted = await get_whitelist(guild.id)
+        wl_count = len(whitelisted)
+
+        embed = discord.Embed(title=f"⚙️ {guild.name} Configuration", color=0x4488FF)
+        log_ch = guild.get_channel(settings.get("log_channel", 0))
+        mod_ch = guild.get_channel(settings.get("mod_channel", 0))
+        welcome_ch = guild.get_channel(settings.get("welcome_channel", 0))
+        farewell_ch = guild.get_channel(settings.get("farewell_channel", 0))
+        boost_ch = guild.get_channel(settings.get("boost_channel", 0))
+        autorole = guild.get_role(settings.get("autorole", 0))
+
+        embed.add_field(name="Antinuke", value="✅ Enabled" if settings.get("antinuke_enabled") else "❌ Disabled", inline=True)
+        embed.add_field(name="AutoMod", value="✅ Enabled" if settings.get("automod_enabled") else "❌ Disabled", inline=True)
+        embed.add_field(name="Punishment", value=f"`{settings.get('punishment', 'ban')}`", inline=True)
+        embed.add_field(name="Log Channel", value=log_ch.mention if log_ch else "Not set", inline=True)
+        embed.add_field(name="Mod Channel", value=mod_ch.mention if mod_ch else "Not set", inline=True)
+        embed.add_field(name="Welcome", value=welcome_ch.mention if welcome_ch else "Not set", inline=True)
+        embed.add_field(name="Farewell", value=farewell_ch.mention if farewell_ch else "Not set", inline=True)
+        embed.add_field(name="Boost", value=boost_ch.mention if boost_ch else "Not set", inline=True)
+        embed.add_field(name="Autorole", value=autorole.mention if autorole else "Not set", inline=True)
+        embed.add_field(name="Whitelisted", value=f"{wl_count} user(s)", inline=True)
+
         return await interaction.response.send_message(embed=embed, ephemeral=False)
 
     async def _enable_antinuke_with_animation(self, interaction: discord.Interaction):
@@ -493,8 +513,20 @@ class Config(commands.Cog):
             )
 
         if action_l == "status":
-            # Use premium embed factory for antinuke status
-            embed = await EmbedFactory.antinuke_status(guild, settings)
+            settings = await get_guild(guild.id)
+            enabled = settings.get("antinuke_enabled", 1)
+            punishment = settings.get("punishment", "ban")
+
+            embed = discord.Embed(title="🛡️ Antinuke Status", color=0x4488FF)
+            embed.add_field(name="Status", value="✅ Enabled" if enabled else "❌ Disabled", inline=True)
+            embed.add_field(name="Punishment", value=f"`{punishment}`", inline=True)
+
+            lines = []
+            for action_type in DEFAULT_ANTINUKE_THRESHOLDS:
+                max_count, window = await get_antinuke_threshold(guild.id, action_type)
+                lines.append(f"`{action_type}`: {max_count}/{window}s")
+            embed.add_field(name="Thresholds", value="\n".join(lines), inline=False)
+
             return await interaction.response.send_message(embed=embed, ephemeral=False)
 
         return await interaction.response.send_message(embed=error_embed("Use: `enable`, `disable`, or `status`."), ephemeral=True)
@@ -555,9 +587,19 @@ class Config(commands.Cog):
             )
 
         if action_l == "list":
-            # Use premium embed factory for whitelist display
-            users = await get_whitelist(guild.id)
-            embed = await EmbedFactory.whitelist_dashboard(guild, users)
+            entries = await get_whitelist(guild.id)
+            if not entries:
+                return await interaction.response.send_message(embed=info_embed("Whitelisted Users", "No whitelisted users in this server."), ephemeral=False)
+
+            lines = []
+            for e in entries[:20]:
+                member = guild.get_member(e["user_id"])
+                name = member.mention if member else f"<@{e['user_id']}>"
+                level_name = "Full" if e["trust_level"] == 2 else "Partial"
+                lines.append(f"{name} — **{level_name}** (`{e['trust_level']}`)")
+
+            embed = info_embed("Whitelisted Users", "\n".join(lines))
+            embed.add_field(name="Note", value=f"Bot owner (`{OWNER_ID}`) is always fully whitelisted.", inline=False)
             return await interaction.response.send_message(embed=embed, ephemeral=False)
 
         return await interaction.response.send_message(embed=error_embed("Use: `add`, `remove`, or `list`."), ephemeral=True)

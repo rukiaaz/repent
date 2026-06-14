@@ -52,11 +52,13 @@ RAID_ACCOUNT_AGE = 7  # days
 PUNISHMENT_TYPES = ["ban", "kick", "strip", "timeout"]
 DEFAULT_PUNISHMENT = "ban"
 
-# ── Embed Colors ──
-COLOR_ALERT = 0xFF4444    # Danger / Punishment / Antinuke trigger
-COLOR_SUCCESS = 0x44FF88  # Success / Enabled
-COLOR_INFO = 0x4488FF     # Info / Status
-COLOR_WARNING = 0xFFAA00  # Warning / Caution
+# ── Embed Colors (Premium Design System) ──
+# Legacy colors kept for backward compatibility
+# New premium colors are in utils/theme_manager.py
+COLOR_ALERT = 0xEF4444    # Danger / Punishment / Antinuke trigger (modern red)
+COLOR_SUCCESS = 0x10B981  # Success / Enabled (modern emerald)
+COLOR_INFO = 0x3B82F6     # Info / Status (modern blue)
+COLOR_WARNING = 0xF59E0B  # Warning / Caution (modern amber)
 
 # ── Leveling ──
 DEFAULT_XP_MIN = 15

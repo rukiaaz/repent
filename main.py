@@ -18,6 +18,7 @@ from utils.logger import get_logger
 from utils.health_check import get_health_checker
 from utils.cache_layer import get_cache_layer
 from utils.rate_limiter import set_cache_layer_for_rate_limiter
+from utils.command_sync import get_sync_manager, get_startup_validator
 
 
 class Repent(commands.Bot):
@@ -74,13 +75,19 @@ class Repent(commands.Bot):
             except Exception as e:
                 self.logger.error(f"Failed to load cog {cog_name}", exc_info=True)
 
+        # Run startup validation
+        validator = get_startup_validator(self)
+        validation_passed = await validator.validate_all()
+        
+        if not validation_passed:
+            self.logger.warning("[WARN] Startup validation failed - some commands may not work")
 
-        # Sync slash commands
-        try:
-            await self.tree.sync()
-            self.logger.info("Slash commands synced globally")
-        except Exception as e:
-            self.logger.error(f"Failed to sync commands", exc_info=True)
+        # Sync slash commands with production-grade system
+        sync_manager = get_sync_manager(self)
+        stats = await sync_manager.sync_all()
+        
+        if stats.failed_commands > 0 or stats.missing_commands > 0:
+            self.logger.warning("[WARN] Command sync had issues - check logs for details")
 
         # Start background tasks
         asyncio.create_task(self.cache_snapshot_loop())

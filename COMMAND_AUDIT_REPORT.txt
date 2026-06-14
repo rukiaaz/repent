@@ -1,0 +1,190 @@
+======================================================================
+COMMAND DISCOVERY REPORT
+======================================================================
+
+Total Commands Discovered: 71
+Total Cogs Scanned: 20
+
+======================================================================
+COMMANDS BY COG
+======================================================================
+
+cogs.advanced_security (2 commands):
+  /defense - Manage defense system status (Admin only)
+  /trust - View user activity logs (Admin only)
+
+cogs.backup (4 commands):
+  /create - Create backup of server roles and channels
+  /delete - Delete a server backup
+  /list - List all server backups
+  /restore - No description
+
+cogs.captcha (2 commands):
+  /captcha - Configure captcha system (Admin only)
+  /verify-captcha - Complete captcha verification
+
+cogs.cases (2 commands):
+  /cases - View all recent cases or cases for a user
+  /modmail - Configure and manage modmail system (Admin only)
+
+cogs.config (11 commands):
+  /antinuke - Manage antinuke settings (Admin only)
+  /antinukeconfig - Configure advanced antinuke settings
+  /config - View or set configuration (Admin only)
+  /quicksetup - One-command full setup: configures logs, punishment, whitelists, and protections
+  /safeadmin - Manage safe admins - immune to antinuke (Admin only)
+  /setchannellog - Set channel for logging message edits/deletions (Admin only)
+  /setguildlog - Set channel for logging guild events (joins, leaves, etc) (Admin only)
+  /setmodlog - Set channel for logging moderation actions (Admin only)
+  /setmsglog - Set channel for logging all messages (Admin only)
+  /setup - Interactive setup wizard (Admin only)
+  /setvclog - Set channel for logging voice channel events (Admin only)
+
+cogs.help (1 commands):
+  /help - Show all bot commands in a dropdown menu
+
+cogs.moderation (16 commands):
+  /clearwarns - Clear all warnings for a user
+  /hardban - Ban a user and add to hardban list (auto-reban on rejoin)
+  /kick - Kick a user from the server
+  /lock - Lock a channel
+  /nick - Change a user's nickname
+  /purge - Delete recent messages
+  /purgeuser - Delete messages from a specific user
+  /roleadd - Add a role to a user
+  /roleremove - Remove a role from a user
+  /slowmode - Set slowmode for a channel
+  /unban - Unban a user by ID
+  /unhardban - Remove a user from the hardban list
+  /unlock - Unlock a channel
+  /untimeout - Remove timeout from a user
+  /warn - Warn a user
+  /warnings - List warnings for a user
+
+cogs.premium (4 commands):
+  /premium - View premium status and features
+  /premium-features - View all premium tier features
+  /premium-set - Set premium tier (Owner only)
+  /premium-usage - View premium usage statistics (Admin only)
+
+cogs.reaction_roles (1 commands):
+  /finalizerole - Finalize and activate role message (Mod only)
+
+cogs.tickets (4 commands):
+  /panel - Send ticket panel to channel (Admin only)
+  /ticket - Create a support ticket
+  /ticket-categories - List ticket categories
+  /ticket-setup - Configure ticket categories (Admin only)
+
+cogs.url_scanner (1 commands):
+  /urlscan - Configure URL scanning (Admin only)
+
+cogs.utility (23 commands):
+  /afk - Set your AFK status
+  /announcements - View recent bot updates and announcements
+  /avatar - Show a user's avatar
+  /banner - Show a user's banner
+  /botinfo - Show bot information
+  /channelinfo - Show channel info
+  /clearsnipe - Clear snipe data for this channel (Mod only)
+  /editsnipe - Show the last edited message in this channel
+  /health - Check bot health status (Admin only)
+  /instagram - Show Instagram profile info
+  /invite - Get the bot invite link
+  /ping - Check bot latency
+  /roleinfo - Show info about a role
+  /serverinfo - Show server information
+  /serverstats - Show current server statistics
+  /snipe - Show the last deleted message in this channel
+  /spam - Spam a message (Admin only)
+  /stats - Show bot-wide statistics
+  /tiktok - Show TikTok profile info
+  /updatepresence - Force update bot presence (Bot Owner only)
+  /uptime - Show bot uptime
+  /userinfo - Show info about a user
+  /youtube - Show YouTube channel info
+
+======================================================================
+
+======================================================================HELP AUDIT RESULTS
+======================================================================
+/backup: Exists in help but not in code (DEAD LINK)
+/automod: Exists in help but not in code (DEAD LINK)
+/ban: Exists in help but not in code (DEAD LINK)
+/leaderboard: Exists in help but not in code (DEAD LINK)
+/antilink: Exists in help but not in code (DEAD LINK)
+/ignore: Exists in help but not in code (DEAD LINK)
+/antinsfw: Exists in help but not in code (DEAD LINK)
+/customcmd: Exists in help but not in code (DEAD LINK)
+/pardon: Exists in help but not in code (DEAD LINK)
+/rank: Exists in help but not in code (DEAD LINK)
+/timeout: Exists in help but not in code (DEAD LINK)
+/deletion: Exists in help but not in code (DEAD LINK)
+/badword: Exists in help but not in code (DEAD LINK)
+/blacklist: Exists in help but not in code (DEAD LINK)
+/channels: Exists in help but not in code (DEAD LINK)
+/raidscore: Exists in help but not in code (DEAD LINK)
+/resetxp: Exists in help but not in code (DEAD LINK)
+/setlevel: Exists in help but not in code (DEAD LINK)
+/removals: Exists in help but not in code (DEAD LINK)
+/createrole: Exists in help but not in code (DEAD LINK)
+/moves: Exists in help but not in code (DEAD LINK)
+/botwhitelist: Exists in help but not in code (DEAD LINK)
+/logging: Exists in help but not in code (DEAD LINK)
+/raid: Exists in help but not in code (DEAD LINK)
+/remove: Exists in help but not in code (DEAD LINK)
+/antispam: Exists in help but not in code (DEAD LINK)
+/unignore: Exists in help but not in code (DEAD LINK)
+/antinukelog: Exists in help but not in code (DEAD LINK)
+/case: Exists in help but not in code (DEAD LINK)
+/levelrole: Exists in help but not in code (DEAD LINK)
+/addtorole: Exists in help but not in code (DEAD LINK)
+/antitoken: Exists in help but not in code (DEAD LINK)
+/rolewhitelist: Exists in help but not in code (DEAD LINK)
+/punished: Exists in help but not in code (DEAD LINK)
+/removerole: Exists in help but not in code (DEAD LINK)
+/antiraid: Exists in help but not in code (DEAD LINK)
+/disable: Exists in help but not in code (DEAD LINK)
+/leaves: Exists in help but not in code (DEAD LINK)
+/whitelist: Exists in help but not in code (DEAD LINK)
+/antimention: Exists in help but not in code (DEAD LINK)
+/antinuke_restore: Exists in help but not in code (DEAD LINK)
+/urlscan: Exists in code but not in help (MISSING FROM HELP)
+/ticket: Exists in code but not in help (MISSING FROM HELP)
+/premium-features: Exists in code but not in help (MISSING FROM HELP)
+/ticket-categories: Exists in code but not in help (MISSING FROM HELP)
+/clearsnipe: Exists in code but not in help (MISSING FROM HELP)
+/uptime: Exists in code but not in help (MISSING FROM HELP)
+/health: Exists in code but not in help (MISSING FROM HELP)
+/create: Exists in code but not in help (MISSING FROM HELP)
+/botinfo: Exists in code but not in help (MISSING FROM HELP)
+/afk: Exists in code but not in help (MISSING FROM HELP)
+/editsnipe: Exists in code but not in help (MISSING FROM HELP)
+/ticket-setup: Exists in code but not in help (MISSING FROM HELP)
+/premium: Exists in code but not in help (MISSING FROM HELP)
+/avatar: Exists in code but not in help (MISSING FROM HELP)
+/ping: Exists in code but not in help (MISSING FROM HELP)
+/snipe: Exists in code but not in help (MISSING FROM HELP)
+/restore: Exists in code but not in help (MISSING FROM HELP)
+/serverstats: Exists in code but not in help (MISSING FROM HELP)
+/spam: Exists in code but not in help (MISSING FROM HELP)
+/invite: Exists in code but not in help (MISSING FROM HELP)
+/defense: Exists in code but not in help (MISSING FROM HELP)
+/stats: Exists in code but not in help (MISSING FROM HELP)
+/roleinfo: Exists in code but not in help (MISSING FROM HELP)
+/updatepresence: Exists in code but not in help (MISSING FROM HELP)
+/list: Exists in code but not in help (MISSING FROM HELP)
+/captcha: Exists in code but not in help (MISSING FROM HELP)
+/tiktok: Exists in code but not in help (MISSING FROM HELP)
+/premium-set: Exists in code but not in help (MISSING FROM HELP)
+/verify-captcha: Exists in code but not in help (MISSING FROM HELP)
+/premium-usage: Exists in code but not in help (MISSING FROM HELP)
+/instagram: Exists in code but not in help (MISSING FROM HELP)
+/youtube: Exists in code but not in help (MISSING FROM HELP)
+/panel: Exists in code but not in help (MISSING FROM HELP)
+/channelinfo: Exists in code but not in help (MISSING FROM HELP)
+/announcements: Exists in code but not in help (MISSING FROM HELP)
+/serverinfo: Exists in code but not in help (MISSING FROM HELP)
+/banner: Exists in code but not in help (MISSING FROM HELP)
+/userinfo: Exists in code but not in help (MISSING FROM HELP)
+/trust: Exists in code but not in help (MISSING FROM HELP)

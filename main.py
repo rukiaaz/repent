@@ -64,12 +64,7 @@ class Repent(commands.Bot):
         for filename in os.listdir(cogs_dir):
             if filename.endswith(".py") and filename != "__init__.py":
                 cog_name = f"cogs.{filename[:-3]}"
-                # Skip cogs that are known to have no commands (to avoid sync issues)
-                skip_cogs = ['cogs.antinuke', 'cogs.antiraid', 'cogs.automod', 
-                              'cogs.custom_commands', 'cogs.leveling', 'cogs.logging',
-                              'cogs.verification', 'cogs.welcome']
-                if cog_name not in skip_cogs:
-                    cogs_to_load.append(cog_name)
+                cogs_to_load.append(cog_name)
         
         for cog_name in cogs_to_load:
             try:
@@ -79,6 +74,16 @@ class Repent(commands.Bot):
                 self.logger.info(f"Loaded cog: {cog_name}")
             except Exception as e:
                 self.logger.error(f"Failed to load cog {cog_name}", exc_info=True)
+
+        # Log all commands in the tree after loading
+        self.logger.info("=" * 70)
+        self.logger.info("COMMAND TREE INVENTORY")
+        self.logger.info("=" * 70)
+        tree_commands = list(self.tree.walk_commands())
+        self.logger.info(f"Total commands in tree: {len(tree_commands)}")
+        for cmd in tree_commands:
+            self.logger.info(f"  /{cmd.qualified_name}")
+        self.logger.info("=" * 70)
 
         # Simple, robust command sync
         stats = await sync_commands_simple(self)

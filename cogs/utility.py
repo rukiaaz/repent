@@ -683,8 +683,7 @@ class Utility(commands.Cog):
             )
 
     @app_commands.command(name="sync", description="Manually sync slash commands (Bot Owner only)")
-    @app_commands.describe(clear="Clear all commands before syncing (removes stale commands)")
-    async def sync_commands(self, interaction: discord.Interaction, clear: bool = False):
+    async def sync_commands(self, interaction: discord.Interaction):
         """Manually sync slash commands - owner only."""
         if interaction.user.id != OWNER_ID:
             return await interaction.response.send_message(
@@ -695,17 +694,15 @@ class Utility(commands.Cog):
         await interaction.response.defer(thinking=True)
         
         try:
-            stats = await sync_commands_simple(self.bot, clear_first=clear)
+            stats = await sync_commands_simple(self.bot)
             
             if stats.get('success', False):
                 embed = success_embed(
                     "Commands Synced",
-                    f"Successfully synced {stats['synced']} commands to Discord." + 
-                    (f" (Tree cleared first)" if clear else "")
+                    f"Successfully synced {stats['synced']} commands to Discord."
                 )
                 embed.add_field(name="Commands in Tree", value=str(stats['tree_commands']), inline=True)
                 embed.add_field(name="Synced to Discord", value=str(stats['synced']), inline=True)
-                embed.add_field(name="Verified in Discord", value=str(stats['verified']), inline=True)
                 await interaction.followup.send(embed=embed, ephemeral=False)
             else:
                 await interaction.followup.send(
@@ -715,6 +712,51 @@ class Utility(commands.Cog):
         except Exception as e:
             await interaction.followup.send(
                 embed=error_embed(f"Error during sync: {str(e)}"),
+                ephemeral=False
+            )
+
+    @app_commands.command(name="tree", description="Show all commands in the command tree (Bot Owner only)")
+    async def show_tree(self, interaction: discord.Interaction):
+        """Show command tree inventory."""
+        if interaction.user.id != OWNER_ID:
+            return await interaction.response.send_message(
+                embed=error_embed("Only the bot owner can use this command."),
+                ephemeral=True
+            )
+        
+        await interaction.response.defer(thinking=True)
+        
+        try:
+            tree_commands = list(self.bot.tree.walk_commands())
+            
+            # Group by cog
+            by_cog = {}
+            for cmd in tree_commands:
+                cog_name = cmd.binding.__class__.__name__ if cmd.binding else "Unknown"
+                if cog_name not in by_cog:
+                    by_cog[cog_name] = []
+                by_cog[cog_name].append(cmd.qualified_name)
+            
+            embed = discord.Embed(
+                title="📊 Command Tree Inventory",
+                description=f"Total commands: {len(tree_commands)}",
+                color=COLOR_INFO
+            )
+            
+            for cog_name in sorted(by_cog.keys()):
+                cmd_list = by_cog[cog_name]
+                embed.add_field(
+                    name=f"{cog_name} ({len(cmd_list)})",
+                    value=", ".join(f"/{cmd}" for cmd in cmd_list),
+                    inline=False
+                )
+            
+            embed.set_footer(text=f"{BOT_NAME} v{VERSION}")
+            await interaction.followup.send(embed=embed, ephemeral=False)
+            
+        except Exception as e:
+            await interaction.followup.send(
+                embed=error_embed(f"Error: {str(e)}"),
                 ephemeral=False
             )
 

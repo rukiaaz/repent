@@ -47,6 +47,7 @@ from database import (
 from utils.embeds import antinuke_embed, error_embed, info_embed, success_embed
 from utils.cache import snapshot_guild
 from utils.logger import get_logger
+from utils.enhanced_restore import EnhancedRestoreSystem, ConsecutiveAttackDetector
 
 
 class InMemoryRateTracker:
@@ -167,6 +168,9 @@ class Antinuke(commands.Cog):
         self._processed_entries: Dict[int, datetime] = {}
         self._cleanup_task = None
         self.logger = get_logger()
+        
+        # Enhanced restore system for consecutive nuke protection
+        self.enhanced_restore = EnhancedRestoreSystem(bot, self.logger)
         
         # Whitelist result cache: {(guild_id, user_id): (result, timestamp)}
         self._whitelist_cache: Dict[Tuple[int, int], Tuple[bool, datetime]] = {}
@@ -928,6 +932,21 @@ class Antinuke(commands.Cog):
                 self.logger.warning(f"Aborting punishment for {member.id} - user is whitelisted")
                 return
             
+            # Record this attack for consecutive detection
+            self.enhanced_restore.attack_detector.record_attack(guild.id)
+            
+            # Check for consecutive attacks - activate emergency mode if needed
+            if self.enhanced_restore.attack_detector.is_consecutive_attack(guild.id):
+                await self.enhanced_restore.activate_emergency_mode(guild)
+                self.logger.security("CONSECUTIVE_ATTACK", f"Consecutive attack detected in {guild.name} by {member.id}", guild.id)
+            
+            # Create protected snapshot before punishment
+            try:
+                await snapshot_guild(guild, trigger_event="attack_detected")
+                self.logger.info(f"Created attack snapshot for guild {guild.id}")
+            except Exception as e:
+                self.logger.warning(f"Failed to create attack snapshot: {e}")
+            
             # Check if bot can punish this user based on role hierarchy
             bot_member = guild.me
             
@@ -1554,11 +1573,69 @@ class Antinuke(commands.Cog):
         guild: discord.Guild,
         only_channel_ids: Optional[Set[int]] = None,
         only_role_ids: Optional[Set[int]] = None,
+        attack_timestamp: str = None,
     ) -> None:
-        """Best-effort restore channels + roles from cache.
-
+        """Enhanced restore using multi-snapshot system.
+        
         If only_channel_ids / only_role_ids are provided, restore ONLY those missing.
+        If attack_timestamp is provided, selects snapshot from before the attack.
         """
+        try:
+            # Select the best snapshot for restoration
+            snapshot = await self.enhanced_restore.select_restore_snapshot(guild.id, attack_timestamp)
+            
+            if not snapshot:
+                self.logger.warning(f"No snapshot available for guild {guild.id}, using fallback restore")
+                # Fall back to old method
+                await self._legacy_restore_from_cache(guild, only_channel_ids, only_role_ids)
+                return
+            
+            # Parse snapshot data
+            from database import verify_snapshot_checksum
+            if not await verify_snapshot_checksum(snapshot['id']):
+                self.logger.error(f"Snapshot {snapshot['id']} failed checksum verification, using fallback")
+                await self._legacy_restore_from_cache(guild, only_channel_ids, only_role_ids)
+                return
+            
+            snapshot_data = json.loads(snapshot['data'])
+            
+            # Restore guild name first (if changed)
+            await self._restore_guild_name(guild)
+            
+            # Restore channel names for renamed channels
+            if only_channel_ids:
+                await self._restore_channel_names(guild, only_channel_ids)
+            
+            # Use enhanced restore for full state recovery
+            if only_role_ids:
+                # Only restore specific roles using old method for now
+                await self._restore_roles(guild, only_role_ids)
+            else:
+                # Use enhanced full restore for all roles
+                await self.enhanced_restore.restore_roles_full(guild, snapshot_data)
+            
+            if only_channel_ids:
+                # Restore specific channels using old method for now
+                tasks = [self._auto_restore_channel(guild, channel_id) for channel_id in only_channel_ids]
+                await asyncio.gather(*tasks, return_exceptions=True)
+            else:
+                # Use enhanced full restore for all channels
+                await self.enhanced_restore.restore_channels_full(guild, snapshot_data)
+            
+            self.logger.info(f"Enhanced restore completed for guild {guild.id} using snapshot {snapshot['id']}")
+            
+        except Exception as e:
+            self.logger.error(f"Enhanced restore failed: {e}, falling back to legacy", exc_info=True)
+            # Fall back to old method on error
+            await self._legacy_restore_from_cache(guild, only_channel_ids, only_role_ids)
+    
+    async def _legacy_restore_from_cache(
+        self,
+        guild: discord.Guild,
+        only_channel_ids: Optional[Set[int]] = None,
+        only_role_ids: Optional[Set[int]] = None,
+    ) -> None:
+        """Legacy restore method as fallback."""
         try:
             # Restore guild name first (if changed)
             await self._restore_guild_name(guild)
@@ -1577,7 +1654,7 @@ class Antinuke(commands.Cog):
                 tasks = [self._auto_restore_channel(guild, channel_id) for channel_id in only_channel_ids]
                 await asyncio.gather(*tasks, return_exceptions=True)
         except Exception as e:
-            self.logger.error(f"Auto-restore from cache failed: {e}", exc_info=True)
+            self.logger.error(f"Legacy restore from cache failed: {e}", exc_info=True)
     
     async def _restore_roles(self, guild: discord.Guild, role_ids: Set[int]) -> None:
         """Restore specific roles from cache."""
@@ -2086,6 +2163,7 @@ class Antinuke(commands.Cog):
                     guild,
                     only_channel_ids=restore_channel_ids,
                     only_role_ids=restore_role_ids,
+                    attack_timestamp=entry.created_at.isoformat() if entry.created_at else None,
                 )
             return
 
@@ -2127,6 +2205,7 @@ class Antinuke(commands.Cog):
                 guild,
                 only_channel_ids=restore_channel_ids,
                 only_role_ids=restore_role_ids,
+                attack_timestamp=entry.created_at.isoformat() if entry.created_at else None,
             )
 
         if action == discord.AuditLogAction.bot_add and extra_bot_id is not None:
@@ -2252,7 +2331,7 @@ class Antinuke(commands.Cog):
         """Create an automatic snapshot for the guild."""
         try:
             from utils.cache import snapshot_guild
-            await snapshot_guild(guild)
+            await snapshot_guild(guild, trigger_event="manual")
             self.logger.info(f"Auto-snapshot created for guild {guild.name} ({guild.id})")
             return True
         except Exception as e:
@@ -2410,7 +2489,7 @@ class Antinuke(commands.Cog):
 
         await interaction.response.defer(thinking=True)
         try:
-            await self._auto_restore_from_cache(interaction.guild)
+            await self._auto_restore_from_cache(interaction.guild, attack_timestamp=None)
         except Exception:
             pass
 

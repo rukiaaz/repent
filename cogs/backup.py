@@ -497,5 +497,9 @@ class Backup(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Backup(bot))
+    # Temporarily disabled due to Discord's 100 global command limit
+    # Antinuke now has built-in auto-restore, making manual backup less critical
+    # Re-enable after consolidating commands or using guild-specific commands
+    # await bot.add_cog(Backup(bot))
+    pass
 

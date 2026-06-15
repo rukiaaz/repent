@@ -151,4 +151,7 @@ class Premium(commands.Cog):
         return await interaction.response.send_message(embed=embed, ephemeral=False)
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Premium(bot))
+    # Temporarily disabled due to Discord's 100 global command limit
+    # Re-enable after consolidating other commands or using guild-specific commands
+    # await bot.add_cog(Premium(bot))
+    pass

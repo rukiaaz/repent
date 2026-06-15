@@ -115,7 +115,7 @@ class Repent(commands.Bot):
         # Initial cache snapshot for all guilds
         for guild in self.guilds:
             try:
-                await snapshot_guild(guild)
+                await snapshot_guild(guild, trigger_event="startup")
                 self.logger.info(f"Snapshotted guild: {guild.name} ({guild.id})")
             except Exception as e:
                 self.logger.error(f"Failed to snapshot guild {guild.id}", exc_info=True)
@@ -138,7 +138,7 @@ class Repent(commands.Bot):
     async def on_guild_join(self, guild: discord.Guild):
         """Cache newly joined guild immediately."""
         try:
-            await snapshot_guild(guild)
+            await snapshot_guild(guild, trigger_event="guild_join")
             self.logger.info(f"Joined and cached guild: {guild.name} ({guild.id})")
             # Update presence with new count
             await self.update_presence()
@@ -243,7 +243,7 @@ class Repent(commands.Bot):
                                     await antinuke_cog.cleanup_old_snapshots(guild, keep_count=3)
                             else:
                                 # Fallback to basic snapshot
-                                await snapshot_guild(guild)
+                                await snapshot_guild(guild, trigger_event="scheduled")
                         except Exception as e:
                             self.logger.error(f"Failed to snapshot guild {guild.id}", exc_info=True)
                     

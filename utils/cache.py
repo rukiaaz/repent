@@ -25,7 +25,7 @@ async def snapshot_guild(guild: discord.Guild, trigger_event: str = "manual"):
         from database import create_snapshot
         snapshot_data = {
             'guild_name': guild.name,
-            'guild_icon': guild.icon,
+            'guild_icon': str(guild.icon) if guild.icon else None,  # Convert Asset to string
             'channels': [],
             'roles': []
         }

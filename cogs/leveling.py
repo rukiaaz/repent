@@ -37,6 +37,11 @@ class Leveling(commands.Cog):
         guild_id = message.guild.id
         user_id = message.author.id
 
+        # Check if leveling is enabled for this guild
+        settings = await get_guild(guild_id)
+        if not settings.get("leveling_enabled", 1):
+            return
+
         # Check cooldown
         last = await get_xp_cooldown(guild_id, user_id)
         if last:
@@ -228,6 +233,28 @@ class Leveling(commands.Cog):
             await interaction.response.send_message(
                 embed=info_embed("Leveling Setup", "Provide a channel or set dm=True."), ephemeral=True
             )
+
+    @discord.app_commands.command(name="leveling", description="Enable or disable the leveling system (Admin only)")
+    @discord.app_commands.describe(status="on to enable, off to disable")
+    async def leveling_toggle(self, interaction: discord.Interaction, status: str):
+        from config import OWNER_ID
+        if not interaction.user.guild_permissions.administrator and interaction.user.id != OWNER_ID:
+            return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
+
+        status_lower = status.lower()
+        if status_lower not in ("on", "off"):
+            return await interaction.response.send_message(
+                embed=error_embed("Invalid status. Use 'on' or 'off'."), ephemeral=True
+            )
+
+        enabled = 1 if status_lower == "on" else 0
+        await update_guild(interaction.guild.id, leveling_enabled=enabled)
+
+        status_text = "enabled" if enabled else "disabled"
+        await interaction.response.send_message(
+            embed=success_embed("Leveling System", f"The leveling system has been **{status_text}**."),
+            ephemeral=False,
+        )
 
     def _progress_bar(self, percent: float, length: int = 15) -> str:
         filled = int(length * percent / 100)

@@ -449,18 +449,18 @@ class EmbedFactory:
             },
             {
                 "name": "Punishment",
-                "value=config.get('punishment', 'ban').upper()",
+                "value": config.get('punishment', 'ban').upper(),
                 "inline": True
             },
             {
                 "name": "Antinuke",
-                "value='✓ Enabled' if config.get('antinuke_enabled') else '✗ Disabled',
+                "value": "[PASS] Enabled" if config.get('antinuke_enabled') else "[FAIL] Disabled",
                 "inline": True
             },
         ]
         
         embed = cls.ui_manager.create_dashboard_embed(
-            title="✓ Setup Complete",
+            title="[SUCCESS] Setup Complete",
             description="Your server is now protected by Repent",
             sections=sections,
             guild=guild

@@ -276,6 +276,13 @@ class AutoMod(commands.Cog):
         
         # Per-guild message history for pattern analysis
         self.message_history: Dict[int, Dict[int, List[str]]] = {}  # guild_id -> user_id -> [messages]
+        
+        # Webhook info cache to avoid repeated API calls
+        self.webhook_cache: Dict[int, Tuple[discord.Webhook, datetime]] = {}  # webhook_id -> (webhook, cached_at)
+        self.webhook_cache_ttl = 300  # 5 minutes cache TTL
+        
+        # Rate limit tracking for webhook operations
+        self.webhook_api_cooldowns: Dict[int, datetime] = {}  # webhook_id -> last_api_call
 
     async def cog_load(self):
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
@@ -289,6 +296,13 @@ class AutoMod(commands.Cog):
         while not self.bot.is_closed():
             await asyncio.sleep(30)
             await self.spam_tracker.cleanup()
+            
+            # Cleanup webhook cache (remove entries older than TTL)
+            cutoff = datetime.now(timezone.utc) - timedelta(seconds=self.webhook_cache_ttl)
+            for webhook_id in list(self.webhook_cache.keys()):
+                webhook, cached_at = self.webhook_cache[webhook_id]
+                if cached_at < cutoff:
+                    del self.webhook_cache[webhook_id]
             
             # Cleanup message history (remove entries older than 1 hour)
             cutoff = datetime.now(timezone.utc) - timedelta(minutes=60)
@@ -305,6 +319,46 @@ class AutoMod(commands.Cog):
                 # Remove empty guild entries
                 if not self.message_history[guild_id]:
                     del self.message_history[guild_id]
+
+    async def _fetch_webhook_with_cache(self, webhook_id: int) -> discord.Webhook | None:
+        """Fetch webhook with caching and rate limit handling to avoid API abuse."""
+        # Check cache first
+        if webhook_id in self.webhook_cache:
+            webhook, cached_at = self.webhook_cache[webhook_id]
+            # Cache is still valid
+            if (datetime.now(timezone.utc) - cached_at).total_seconds() < self.webhook_cache_ttl:
+                return webhook
+        
+        # Check if we're rate limited for this webhook
+        if webhook_id in self.webhook_api_cooldowns:
+            last_call = self.webhook_api_cooldowns[webhook_id]
+            if (datetime.now(timezone.utc) - last_call).total_seconds() < 2:  # 2 second cooldown
+                return None  # Skip this fetch to avoid rate limits
+        
+        # Fetch with rate limit handling
+        try:
+            webhook = await self.bot.fetch_webhook(webhook_id)
+            
+            # Cache the result
+            self.webhook_cache[webhook_id] = (webhook, datetime.now(timezone.utc))
+            self.webhook_api_cooldowns[webhook_id] = datetime.now(timezone.utc)
+            
+            return webhook
+        except discord.errors.HTTPException as e:
+            if e.status == 429:  # Rate limit hit
+                self.logger.warning(f"Rate limited while fetching webhook {webhook_id}, skipping")
+                self.webhook_api_cooldowns[webhook_id] = datetime.now(timezone.utc)
+                return None
+            elif e.status == 404:  # Webhook not found
+                self.logger.warning(f"Webhook {webhook_id} not found, removing from cache")
+                self.webhook_cache.pop(webhook_id, None)
+                return None
+            else:
+                self.logger.error(f"Failed to fetch webhook {webhook_id}: {e}")
+                return None
+        except Exception as e:
+            self.logger.error(f"Unexpected error fetching webhook {webhook_id}: {e}")
+            return None
 
     async def _should_ignore(self, message: discord.Message, module: str = "automod") -> bool:
         """Check if message should be ignored by AutoMod."""
@@ -402,45 +456,48 @@ class AutoMod(commands.Cog):
             behavior_threat = self.webhook_detector.analyze_webhook_behavior(message.webhook_id)
             
             action = "Webhook Message Deleted"
-            try:
-                webhook = await self.bot.fetch_webhook(message.webhook_id)
-                if webhook:
-                    # Enhanced webhook verification: check if webhook is managed by bot or trusted user
-                    webhook_creator = getattr(webhook, 'user', None)
-                    is_trusted_webhook = False
-                    
-                    if webhook_creator:
-                        # Check if webhook creator is whitelisted or is a bot
+            
+            # Use cached webhook fetching with rate limit protection
+            webhook = await self._fetch_webhook_with_cache(message.webhook_id)
+            
+            if webhook:
+                # Enhanced webhook verification: check if webhook is managed by bot or trusted user
+                webhook_creator = getattr(webhook, 'user', None)
+                is_trusted_webhook = False
+                
+                if webhook_creator:
+                    # Check if webhook creator is whitelisted or is a bot
+                    try:
                         from database import get_whitelist_entry
                         creator_whitelist = await get_whitelist_entry(guild.id, webhook_creator.id)
                         if creator_whitelist and creator_whitelist.get('trust_level', 0) >= 1:
                             is_trusted_webhook = True
+                    except Exception as e:
+                        self.logger.error(f"Error checking webhook creator whitelist: {e}")
+                
+                # Check rate limits
+                rate_limited, rate_reason = self.webhook_detector.check_rate_limit(message.webhook_id)
+                
+                # Determine action based on threat levels and trust
+                should_delete_webhook = False
+                should_delete_message = True
+                
+                if not is_trusted_webhook:
+                    # Check for critical threats ONLY - be less aggressive to avoid rate limits
+                    if content_threat['threat_level'] == 'CRITICAL' or behavior_threat['risk_level'] == 'CRITICAL':
+                        should_delete_webhook = True
+                        self.webhook_detector.record_violation(message.webhook_id, "critical_threat")
                     
-                    # Check rate limits
-                    rate_limited, rate_reason = self.webhook_detector.check_rate_limit(message.webhook_id)
-                    
-                    # Determine action based on threat levels and trust
-                    should_delete_webhook = False
-                    should_delete_message = True
-                    
-                    if not is_trusted_webhook:
-                        # Check for critical threats
-                        if content_threat['threat_level'] == 'CRITICAL' or behavior_threat['risk_level'] == 'CRITICAL':
-                            should_delete_webhook = True
-                            self.webhook_detector.record_violation(message.webhook_id, "critical_threat")
-                        
-                        # Check if rate limited
-                        elif not rate_limited:
-                            should_delete_webhook = True
-                            self.webhook_detector.record_violation(message.webhook_id, "rate_limit_exceeded")
-                        
-                        # Check for high threat levels
-                        elif content_threat['threat_level'] == 'HIGH' or behavior_threat['risk_level'] == 'HIGH':
-                            should_delete_webhook = True
-                            self.webhook_detector.record_violation(message.webhook_id, "high_risk_behavior")
-                    
-                    # Execute actions
-                    if should_delete_webhook:
+                    # Only delete webhook for critical threats to avoid rate limits
+                    # High threats will still have their messages deleted but webhooks preserved
+                    elif content_threat['threat_level'] == 'HIGH' or behavior_threat['risk_level'] == 'HIGH':
+                        # Just delete the message, not the webhook
+                        should_delete_webhook = False
+                        self.webhook_detector.record_violation(message.webhook_id, "high_risk_behavior")
+                
+                # Execute webhook deletion with proper error handling
+                if should_delete_webhook:
+                    try:
                         await webhook.delete(reason=f"[Repent AutoMod] Webhook deleted for security violation: {reason}")
                         action = f"Webhook Deleted (Security Risk: {reason})"
                         self.logger.security("WEBHOOK_DELETE", 
@@ -452,24 +509,37 @@ class AutoMod(commands.Cog):
                                 "rate_limited": not rate_limited,
                                 "rate_reason": rate_reason
                             })
-                    elif is_trusted_webhook:
-                        action = f"Trusted Webhook Message Deleted (Webhook Preserved) - {reason}"
-                        self.logger.warning(f"Trusted webhook {webhook.id} violated automod but was preserved")
-                    else:
-                        action = f"Webhook Message Deleted (Safe Webhook Preserved) - {reason}"
-                    
-                    # Log detailed threat analysis
-                    if content_threat['is_threat'] or behavior_threat['is_suspicious']:
+                    except discord.errors.HTTPException as e:
+                        if e.status == 429:  # Rate limit hit during deletion
+                            self.logger.warning(f"Rate limited while deleting webhook {webhook.id}, skipping deletion")
+                            action = f"Webhook Message Deleted (Rate Limited, Webhook Preserved) - {reason}"
+                        else:
+                            self.logger.error(f"HTTP error deleting webhook {webhook.id}: {e}")
+                            action = f"Webhook Message Deleted (Deletion Failed: {e}) - {reason}"
+                    except Exception as e:
+                        self.logger.error(f"Error deleting webhook {webhook.id}: {e}")
+                        action = f"Webhook Message Deleted (Deletion Error: {e}) - {reason}"
+                elif is_trusted_webhook:
+                    action = f"Trusted Webhook Message Deleted (Webhook Preserved) - {reason}"
+                    self.logger.warning(f"Trusted webhook {webhook.id} violated automod but was preserved")
+                else:
+                    action = f"Webhook Message Deleted (Safe Webhook Preserved) - {reason}"
+                
+                # Log detailed threat analysis
+                if content_threat['is_threat'] or behavior_threat['is_suspicious']:
+                    try:
                         await log_action(guild.id, "webhook_threat_detected", webhook.id, {
                             "content_threat": content_threat,
                             "behavior_threat": behavior_threat,
                             "rule_violated": rule,
                             "reason": reason
                         })
-                        
-            except Exception as e:
-                action = f"Webhook Message Deleted (Webhook fetch failed: {e})"
-                self.logger.error(f"Failed to fetch/delete webhook {message.webhook_id}", exc_info=True)
+                    except Exception as e:
+                        self.logger.error(f"Error logging webhook threat: {e}")
+            else:
+                # Webhook fetch failed or was rate limited
+                action = f"Webhook Message Deleted (Webhook Unavailable) - {reason}"
+                self.logger.warning(f"Could not fetch webhook {message.webhook_id}, proceeding with message deletion only")
 
             await self._log_automod(guild, rule, author, content, action, message.channel)
             return
@@ -692,9 +762,31 @@ class AutoMod(commands.Cog):
         # ── Token Protection ──
         settings = await get_guild(guild.id)
         if settings.get("anti_token_enabled", 0):
-            # Discord token regex pattern
-            token_pattern = r"[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}"
-            tokens = re.findall(token_pattern, content)
+            # Get sensitivity level and corresponding patterns
+            sensitivity = settings.get("anti_token_sensitivity", "medium")
+            
+            # Token patterns by sensitivity level
+            token_patterns = {
+                "high": [
+                    r"[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}",  # Discord bot tokens
+                    r"mfa\.[A-Za-z0-9_-]{20,}",  # MFA tokens
+                    r"sk_live_[a-zA-Z0-9]{20,}",  # Stripe live keys
+                    r"sk_test_[a-zA-Z0-9]{20,}",  # Stripe test keys
+                ],
+                "medium": [
+                    r"[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}",  # Discord bot tokens
+                    r"mfa\.[A-Za-z0-9_-]{20,}",  # MFA tokens
+                ],
+                "low": [
+                    r"[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}",  # Discord bot tokens only
+                ]
+            }
+            
+            patterns = token_patterns.get(sensitivity, token_patterns["medium"])
+            tokens = []
+            for pattern in patterns:
+                tokens.extend(re.findall(pattern, content))
+            
             if tokens:
                 try:
                     await message.delete()
@@ -702,9 +794,9 @@ class AutoMod(commands.Cog):
                     pass
                 await self._punish_user(message, "token_leak", f"Posting Discord tokens ({len(tokens)} found)")
                 # Log the incident for security monitoring
-                self.logger.security("TOKEN_LEAK", f"Detected {len(tokens)} token(s) in message", 
+                self.logger.security("TOKEN_LEAK", f"Detected {len(tokens)} token(s) in message (sensitivity: {sensitivity})", 
                                    guild_id=guild.id, user_id=author.id, 
-                                   extra={"tokens_found": len(tokens), "channel_id": message.channel.id})
+                                   extra={"tokens_found": len(tokens), "sensitivity": sensitivity, "channel_id": message.channel.id})
                 return
 
         # ── Phishing Detection ──

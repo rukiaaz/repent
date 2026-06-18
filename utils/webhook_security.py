@@ -86,6 +86,19 @@ class WebhookThreatDetector:
         self.history_window = 100  # messages to keep
         
         self.logger = get_logger()
+        
+        # Initialize with known malicious domains
+        self._initialize_known_threats()
+    
+    def _initialize_known_threats(self):
+        """Initialize known malicious URLs and domains."""
+        known_threats = [
+            'discord-login.com', 'discord-gift.com', 'discord-nitro.com',
+            'free-discord-nitro.com', 'discord-steal.com', 'discord-token.com',
+            'discord-verify.com', 'discord-confirm.com', 'discord-support.com',
+            'steamcommunity.com', 'steam-gift.com', 'free-steam.com',
+        ]
+        self.known_malicious_urls.update(known_threats)
     
     def create_profile(self, webhook_id: int, guild_id: int, creator_id: int) -> WebhookProfile:
         """Create a new webhook profile."""
@@ -313,6 +326,37 @@ class WebhookThreatDetector:
     def add_malicious_url(self, url: str):
         """Add a URL to the known malicious URLs list."""
         self.known_malicious_urls.add(url)
+    
+    def scan_webhook_url(self, webhook_url: str) -> Dict[str, any]:
+        """Scan webhook URL for malicious domains and patterns."""
+        threats_found = []
+        threat_score = 0.0
+        
+        # Check for known malicious domains
+        for malicious_domain in self.known_malicious_urls:
+            if malicious_domain in webhook_url.lower():
+                threats_found.append(f"malicious_domain:{malicious_domain}")
+                threat_score += 0.8  # High threat
+        
+        # Check for suspicious URL patterns
+        for pattern in self.SUSPICIOUS_URL_PATTERNS:
+            if re.search(pattern, webhook_url, re.IGNORECASE):
+                threats_found.append(f"suspicious_pattern:{pattern}")
+                threat_score += 0.3
+        
+        # Check for URL shorteners (potential phishing)
+        shortener_patterns = [r'bit\.ly', r'tinyurl', r'goo\.gl', r'ow\.ly']
+        for pattern in shortener_patterns:
+            if re.search(pattern, webhook_url, re.IGNORECASE):
+                threats_found.append(f"url_shortener:{pattern}")
+                threat_score += 0.2
+        
+        return {
+            "is_malicious": threat_score >= 0.5,
+            "threat_score": min(threat_score, 1.0),
+            "threats_detected": threats_found,
+            "threat_level": "CRITICAL" if threat_score >= 0.8 else "HIGH" if threat_score >= 0.5 else "MEDIUM" if threat_score >= 0.3 else "LOW"
+        }
     
     def cleanup_old_profiles(self, days: int = 7):
         """Remove profiles older than specified days."""

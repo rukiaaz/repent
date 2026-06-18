@@ -18,7 +18,9 @@
       "Exec(if)",
       "Exec(Remove-Item)",
       "Exec(mv)",
-      "Exec(git checkout)"
+      "Exec(git checkout)",
+      "Exec(for file)",
+      "Exec(Get-ChildItem)"
     ]
   }
 }

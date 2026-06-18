@@ -152,7 +152,7 @@ GUILDS_ALLOWED_COLUMNS = {
     "message_log_channel", "guild_log_channel", "all_message_log_channel",
     "voice_log_channel", "mod_log_channel", "custom_prefix", "automod_anti_nsfw",
     "log_voice_events", "log_thread_events", "log_role_events", "log_nickname_events",
-    "anti_token_enabled", "modmail_channel", "leveling_enabled"
+    "anti_token_enabled", "anti_token_sensitivity", "modmail_channel", "leveling_enabled"
 }
 
 AUTOMOD_ALLOWED_COLUMNS = {
@@ -360,6 +360,7 @@ async def init_db():
             log_role_events INTEGER DEFAULT 0,
             log_nickname_events INTEGER DEFAULT 0,
             anti_token_enabled INTEGER DEFAULT 0,
+            anti_token_sensitivity TEXT DEFAULT 'medium',
             leveling_enabled INTEGER DEFAULT 1
         )""",
 
@@ -809,6 +810,7 @@ async def init_db():
         ("log_role_events", "INTEGER DEFAULT 0"),
         ("log_nickname_events", "INTEGER DEFAULT 0"),
         ("anti_token_enabled", "INTEGER DEFAULT 0"),
+        ("anti_token_sensitivity", "TEXT DEFAULT 'medium'"),
         ("modmail_channel", "INTEGER DEFAULT 0"),
     ]
     for col_name, col_def in columns_to_add:

@@ -19,6 +19,8 @@ from utils.health_check import get_health_checker
 from utils.cache_layer import get_cache_layer
 from utils.rate_limiter import set_cache_layer_for_rate_limiter
 from utils.sync_simple import sync_commands_simple
+from database_write_queue import get_write_queue
+from database_health import get_health_monitor
 
 
 class Repent(commands.Bot):
@@ -57,6 +59,18 @@ class Repent(commands.Bot):
         set_cache_layer(cache_layer)
         set_cache_layer_for_rate_limiter(cache_layer)
         self.logger.info("Cache layer integrated with database and rate limiter")
+
+        # Initialize write queue for database performance
+        write_queue = get_write_queue()
+        await write_queue.start()
+        await write_queue.recover_from_disk_backup()
+        self.logger.info("Database write queue initialized")
+
+        # Initialize health monitor for database monitoring
+        health_monitor = get_health_monitor()
+        health_monitor.set_cache_layer(cache_layer)
+        await health_monitor.start()
+        self.logger.info("Database health monitor initialized")
 
         # Load all cogs (guard against duplicate loads)
         cogs_dir = os.path.join(os.path.dirname(__file__), "cogs")
@@ -120,6 +134,9 @@ class Repent(commands.Bot):
             except Exception as e:
                 self.logger.error(f"Failed to snapshot guild {guild.id}", exc_info=True)
 
+        # Warm cache with frequently accessed data
+        await self._warm_cache_on_startup()
+
         # Set presence
         await self.update_presence()
 
@@ -134,6 +151,21 @@ class Repent(commands.Bot):
             ),
             status=discord.Status.online,
         )
+
+    async def _warm_cache_on_startup(self):
+        """Warm cache with frequently accessed data for better performance."""
+        self.logger.info("Warming cache with guild data...")
+        from database import get_guild_fast
+
+        warmed_count = 0
+        for guild in self.guilds:
+            try:
+                await get_guild_fast(guild.id)
+                warmed_count += 1
+            except Exception as e:
+                self.logger.error(f"Failed to warm cache for guild {guild.id}: {e}")
+
+        self.logger.info(f"Cache warming complete: {warmed_count}/{len(self.guilds)} guilds cached")
 
     async def on_guild_join(self, guild: discord.Guild):
         """Cache newly joined guild immediately."""
@@ -319,24 +351,34 @@ class Repent(commands.Bot):
     async def shutdown(self):
         """Perform graceful shutdown."""
         self.logger.info("Starting graceful shutdown")
-        
+
         try:
+            # Stop write queue and drain remaining operations
+            write_queue = get_write_queue()
+            await write_queue.stop()
+            self.logger.info("Database write queue stopped")
+
+            # Stop health monitor
+            health_monitor = get_health_monitor()
+            await health_monitor.stop()
+            self.logger.info("Database health monitor stopped")
+
             # Cache layer will be stopped when the loop exits naturally
             # No need to cancel the task as it checks self.is_closed()
-            
+
             # Stop cache layer
             cache_layer = get_cache_layer()
             await cache_layer.stop()
             self.logger.info("Cache layer stopped")
-            
+
             # Close database connections
             await close_all_connections()
             self.logger.info("Database connections closed")
-            
+
             # Close Discord connection
             await self.close()
             self.logger.info("Discord connection closed")
-            
+
         except Exception as e:
             self.logger.error(f"Error during shutdown: {e}", exc_info=True)
         finally:

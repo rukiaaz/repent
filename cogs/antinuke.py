@@ -48,6 +48,7 @@ from utils.embeds import antinuke_embed, error_embed, info_embed, success_embed
 from utils.cache import snapshot_guild
 from utils.logger import get_logger
 from utils.enhanced_restore import EnhancedRestoreSystem, ConsecutiveAttackDetector
+from channel_rename_system import get_rename_tracker
 from utils.cross_guild_security import CrossGuildSecurityCorrelation
 from utils.unified_cache import security_cache, cached
 
@@ -173,7 +174,10 @@ class Antinuke(commands.Cog):
         
         # Enhanced restore system for consecutive nuke protection
         self.enhanced_restore = EnhancedRestoreSystem(bot, self.logger)
-        
+
+        # Channel rename tracker for protection against channel rename spam
+        self.rename_tracker = get_rename_tracker()
+
         # Cross-guild attack correlation system
         self.cross_guild_security = CrossGuildSecurityCorrelation()
         
@@ -428,6 +432,8 @@ class Antinuke(commands.Cog):
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
         # Start priority task worker
         self._task_worker_task = asyncio.create_task(self._task_worker())
+        # Start channel rename tracker
+        await self.rename_tracker.start()
         # Pre-warm cache for guilds that are already loaded
         asyncio.create_task(self._warm_cache())
 
@@ -1753,6 +1759,8 @@ class Antinuke(commands.Cog):
             discord.AuditLogAction.webhook_create,  # Webhook creation
             discord.AuditLogAction.webhook_delete,  # Webhook deletion
             discord.AuditLogAction.member_role_update, # Dangerous role assignment
+            discord.AuditLogAction.thread_create,  # Thread creation
+            discord.AuditLogAction.thread_delete,  # Thread deletion
             discord.AuditLogAction.ban,             # Mass bans
             discord.AuditLogAction.kick,            # Mass kicks
             discord.AuditLogAction.unban,           # Mass unbans
@@ -1812,6 +1820,17 @@ class Antinuke(commands.Cog):
             if entry.target and hasattr(entry.target, "id"):
                 extra_webhook_id = int(entry.target.id)
             target_desc = f"Webhook: {getattr(entry.target, 'name', 'Unknown')}"
+            
+            # Scan webhook URL for malicious domains if URL is available
+            webhook_url = getattr(entry.target, "url", None)
+            if webhook_url:
+                url_scan_result = self.webhook_detector.scan_webhook_url(webhook_url)
+                if url_scan_result["is_malicious"]:
+                    instant_punish = True
+                    instant_reason = f"Malicious webhook URL detected: {url_scan_result['threat_level']} - {', '.join(url_scan_result['threats_detected'])}"
+                    self.logger.security("WEBHOOK_URL_THREAT", 
+                        f"Malicious webhook URL detected: {url_scan_result['threat_level']}", 
+                        guild_id=guild.id, user_id=attacker.id, extra=url_scan_result)
             
             # Track webhook creation for mass detection
             self.rate_tracker.add_event(guild.id, attacker.id, "webhook_create")
@@ -2144,6 +2163,36 @@ class Antinuke(commands.Cog):
 
         elif action == discord.AuditLogAction.sticker_delete:
             action_type = "sticker_delete"
+            
+            # Track sticker deletion for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "sticker_delete")
+            
+            # INSTANT DETECTION: 3 sticker deletes in 2 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "sticker_delete", 2) >= 3:
+                instant_punish = True
+                instant_reason = "Mass sticker deletion attack detected"
+
+        elif action == discord.AuditLogAction.thread_create:
+            action_type = "thread_create"
+            
+            # Track thread creation for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "thread_create")
+            
+            # INSTANT DETECTION: 5 thread creates in 10 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "thread_create", 10) >= 5:
+                instant_punish = True
+                instant_reason = "Mass thread creation attack detected"
+
+        elif action == discord.AuditLogAction.thread_delete:
+            action_type = "thread_delete"
+            
+            # Track thread deletion for mass detection
+            self.rate_tracker.add_event(guild.id, attacker.id, "thread_delete")
+            
+            # INSTANT DETECTION: 3 thread deletes in 5 seconds = instant ban
+            if self.rate_tracker.count_events(guild.id, attacker.id, "thread_delete", 5) >= 3:
+                instant_punish = True
+                instant_reason = "Mass thread deletion attack detected"
 
         if instant_punish:
             target_id = getattr(entry.target, 'id', 0) if entry.target else 0
@@ -2163,7 +2212,7 @@ class Antinuke(commands.Cog):
                 except Exception as e:
                     self.logger.error(f"Failed to trigger channel name restoration: {e}", exc_info=True)
             # Targeted restore for deletes
-            if action in (discord.AuditLogAction.channel_delete, discord.AuditLogAction.role_delete):
+            if action in (discord.AuditLogAction.channel_delete, discord.AuditLogAction.role_delete, discord.AuditLogAction.thread_delete):
                 await self._auto_restore_from_cache(
                     guild,
                     only_channel_ids=restore_channel_ids,
@@ -2384,6 +2433,39 @@ class Antinuke(commands.Cog):
         if before.name != after.name:
             # Track channel name changes per guild for rapid attack detection
             self.rate_tracker.add_event(before.guild.id, 0, "mass_channel_rename")  # user_id 0 = server-wide
+
+            # Track rename with rename tracker for per-user threshold detection
+            try:
+                # Get user from audit logs for tracking
+                await self._wait_for_audit_log_quota(before.guild.id)
+                async for entry in before.guild.audit_logs(action=discord.AuditLogAction.channel_update, limit=1):
+                    if entry.target.id == after.id and entry.changes.before.name == before.name:
+                        user = entry.user
+                        if user:
+                            # Track rename with per-user threshold detection
+                            rename_count, threshold = await self.rename_tracker.track_rename(
+                                before.guild.id, user.id, after.id, before.name, after.name
+                            )
+
+                            # Check threshold and trigger punishment if exceeded
+                            if rename_count >= threshold:
+                                self.logger.security(
+                                    "CHANNEL_RENAME_THRESHOLD",
+                                    f"User {user.id} exceeded channel rename threshold: {rename_count}/{threshold}",
+                                    guild_id=before.guild.id,
+                                    user_id=user.id
+                                )
+
+                                # Trigger instant punishment with threshold reason
+                                await self._handle_instant_punishment(before.guild, user.id, "channel_update",
+                                    f"Channel rename threshold exceeded: {rename_count}/{threshold}", False, after.id)
+
+                                # Mark as punished to prevent duplicate punishment
+                                cache_key = (before.guild.id, user.id)
+                                self._punished_users_cache[cache_key] = datetime.now(timezone.utc)
+                            break
+            except Exception as e:
+                self.logger.error(f"Error tracking channel rename: {e}")
             
             # EMERGENCY LOCKDOWN: If 5+ channels renamed in 1 second, trigger emergency mode
             if self.rate_tracker.count_events(before.guild.id, 0, "mass_channel_rename", 1) >= 5:

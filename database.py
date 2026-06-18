@@ -199,10 +199,16 @@ class ConnectionPool:
             await db.execute("PRAGMA journal_mode = WAL")
             # Enable foreign key constraints
             await db.execute("PRAGMA foreign_keys = ON")
-            # Set busy timeout to handle concurrent access (FIXED: Reduced from 60s to 5s for better failure detection)
-            await db.execute("PRAGMA busy_timeout = 5000")
+            # Set busy timeout to handle concurrent access
+            await db.execute("PRAGMA busy_timeout = 3000")
             # Set synchronous to NORMAL for better write performance
             await db.execute("PRAGMA synchronous = NORMAL")
+            # Set cache size for better performance (default is 2000 pages, increase to 10000)
+            await db.execute("PRAGMA cache_size = -10000")  # -10000 means 10MB cache
+            # Set temp store to memory for better performance
+            await db.execute("PRAGMA temp_store = MEMORY")
+            # Enable query optimizer improvements
+            await db.execute("PRAGMA optimize")
             return db
     
     async def release(self, db: aiosqlite.Connection):
@@ -228,7 +234,7 @@ def get_connection_pool() -> ConnectionPool:
     """Get or create the global connection pool."""
     global _connection_pool_instance
     if _connection_pool_instance is None:
-        _connection_pool_instance = ConnectionPool(max_connections=5)  # FIXED: Reduced from 20 to 5
+        _connection_pool_instance = ConnectionPool(max_connections=10)  # OPTIMIZED: Increased from 5 to 10 for better concurrency
     return _connection_pool_instance
 
 
@@ -831,6 +837,30 @@ async def init_db():
         except Exception:
             pass
 
+    await db.commit()
+    
+    # Create performance indexes for frequently queried columns
+    indexes_to_create = [
+        "CREATE INDEX IF NOT EXISTS idx_whitelist_guild_user ON whitelist(guild_id, user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_whitelist_guild ON whitelist(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_bot_whitelist_guild_bot ON bot_whitelist(guild_id, bot_id)",
+        "CREATE INDEX IF NOT EXISTS idx_role_whitelist_guild_role ON role_whitelist(guild_id, role_id)",
+        "CREATE INDEX IF NOT EXISTS idx_guilds_guild_id ON guilds(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_action_log_guild_timestamp ON action_log(guild_id, timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_punished_users_guild ON punished_users(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_cached_roles_guild ON cached_roles(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_cached_channels_guild ON cached_channels(guild_id)",
+        "CREATE INDEX IF NOT EXISTS idx_strike_log_guild_user_timestamp ON strike_log(guild_id, user_id, timestamp)",
+    ]
+    
+    for index_sql in indexes_to_create:
+        try:
+            await db.execute(index_sql)
+        except Exception as e:
+            # Log but continue if index creation fails (might already exist)
+            import logging
+            logging.debug(f"Index creation info: {e}")
+    
     await db.commit()
     
     # Verify critical tables exist

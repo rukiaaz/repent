@@ -8,6 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from datetime import datetime, timezone
+from typing import Optional
 
 from database import get_guild, update_guild, log_action
 from utils.embeds import success_embed, error_embed, info_embed
@@ -161,5 +162,14 @@ class ZeroTrustSecurity(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    """Load the ZeroTrustSecurity cog."""
+    """Load the ZeroTrust cog."""
+    # Clear any existing commands that might conflict
+    try:
+        existing_commands = bot.tree.get_commands()
+        for cmd in existing_commands:
+            if cmd.name == "zerotrust":
+                bot.tree.remove_command(cmd.name)
+    except Exception as e:
+        pass  # Ignore errors during cleanup
+    
     await bot.add_cog(ZeroTrustSecurity(bot))

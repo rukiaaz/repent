@@ -183,19 +183,19 @@ class Antinuke(commands.Cog):
         
         # Whitelist result cache: {(guild_id, user_id): (result, timestamp)}
         self._whitelist_cache: Dict[Tuple[int, int], Tuple[bool, datetime]] = {}
-        self._cache_ttl = 600  # 10 minutes (increased from 5 minutes for performance)
+        self._cache_ttl = 300  # 5 minutes (OPTIMIZED: reduced from 10 minutes for better security responsiveness)
         
         # Discord object cache: {cache_key: (object, timestamp)}
         self._discord_cache: Dict[str, Tuple[Any, datetime]] = {}
-        self._discord_cache_ttl = 180  # 3 minutes for Discord objects (increased from 1 minute)
+        self._discord_cache_ttl = 120  # 2 minutes for Discord objects (OPTIMIZED: reduced from 3 minutes for fresher data)
         
         # Safe admins JSON cache: {guild_id: (parsed_list, settings_timestamp)}
         self._safe_admins_cache: Dict[int, Tuple[List[int], str, datetime]] = {}
-        self._safe_admins_cache_ttl = 600  # 10 minutes for safe admins (increased from 3 minutes)
+        self._safe_admins_cache_ttl = 300  # 5 minutes for safe admins (OPTIMIZED: reduced from 10 minutes)
         
         # Permission validation cache: {(guild_id, user_id, action_type): (has_permission, timestamp)}
         self._permission_cache: Dict[Tuple[int, int, str], Tuple[bool, datetime]] = {}
-        self._permission_cache_ttl = 300  # 5 minutes for permission validation
+        self._permission_cache_ttl = 180  # 3 minutes for permission validation (OPTIMIZED: reduced from 5 minutes)
         
         # Circuit breaker for parallel attacks: {(guild_id, user_id): punishment_timestamp}
         self._punished_users_cache: Dict[Tuple[int, int], datetime] = {}
@@ -214,6 +214,8 @@ class Antinuke(commands.Cog):
             "punishments_applied": 0,
             "graceful_degradations": 0,
             "detection_times_ms": [],  # Last 100 detection times
+            "database_query_times_ms": [],  # Last 100 database query times
+            "cache_operations": 0,  # Total cache operations
         }
         
         # Priority-based task queue for background operations
@@ -345,15 +347,27 @@ class Antinuke(commands.Cog):
 
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get a summary of performance metrics."""
+        db_times = self._metrics["database_query_times_ms"]
+        cache_hit_rate = self._metrics["cache_hits"] / max(self._metrics["cache_hits"] + self._metrics["cache_misses"], 1) * 100
+        
         return {
             "events_processed": self._metrics["events_processed"],
-            "cache_hit_rate": self._metrics["cache_hits"] / max(self._metrics["cache_hits"] + self._metrics["cache_misses"], 1) * 100,
+            "cache_hit_rate": cache_hit_rate,
             "whitelist_cache_hit_rate": self._metrics["whitelist_cached_hits"] / max(self._metrics["whitelist_checks"], 1) * 100,
             "avg_detection_time_ms": self._get_average_detection_time(),
             "p95_detection_time_ms": self._get_p95_detection_time(),
+            "avg_db_query_time_ms": sum(db_times) / len(db_times) if db_times else 0.0,
+            "p95_db_query_time_ms": sorted(db_times)[int(len(db_times) * 0.95)] if db_times and len(db_times) > 1 else 0.0,
             "punishments_applied": self._metrics["punishments_applied"],
             "graceful_degradations": self._metrics["graceful_degradations"],
+            "cache_operations": self._metrics["cache_operations"],
         }
+    
+    async def _record_db_query_time(self, duration_ms: float):
+        """Record database query time for performance monitoring."""
+        self._metrics["database_query_times_ms"].append(duration_ms)
+        if len(self._metrics["database_query_times_ms"]) > 100:
+            self._metrics["database_query_times_ms"].pop(0)
     
     async def _schedule_priority_task(self, priority: int, coro):
         """Schedule a background task with priority (0 = highest priority)."""

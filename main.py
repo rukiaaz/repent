@@ -72,11 +72,22 @@ class Repent(commands.Bot):
         await health_monitor.start()
         self.logger.info("Database health monitor initialized")
 
-        # Load all cogs (guard against duplicate loads)
+        # Load all cogs (guard against duplicate loads) - prioritize security cogs
         cogs_dir = os.path.join(os.path.dirname(__file__), "cogs")
+        
+        # Security cogs that must load first
+        priority_cogs = ["antinuke.py", "antiraid.py", "antinuke_advanced.py", "behavioral_analysis.py", "multilayer_defense.py", "zerotrust.py", "external_apps.py"]
+        
         cogs_to_load = []
+        
+        # Add priority cogs first
+        for priority_cog in priority_cogs:
+            if os.path.exists(os.path.join(cogs_dir, priority_cog)):
+                cogs_to_load.append(f"cogs.{priority_cog[:-3]}")
+        
+        # Add remaining cogs
         for filename in os.listdir(cogs_dir):
-            if filename.endswith(".py") and filename != "__init__.py":
+            if filename.endswith(".py") and filename != "__init__.py" and filename not in priority_cogs:
                 cog_name = f"cogs.{filename[:-3]}"
                 cogs_to_load.append(cog_name)
         
@@ -86,6 +97,10 @@ class Repent(commands.Bot):
                     continue
                 await self.load_extension(cog_name)
                 self.logger.info(f"Loaded cog: {cog_name}")
+            except discord.app_commands.errors.CommandAlreadyRegistered as e:
+                self.logger.warning(f"Command conflict in {cog_name}: {e.name} - skipping cog")
+            except discord.app_commands.errors.CommandLimitReached as e:
+                self.logger.warning(f"Command limit reached while loading {cog_name} - skipping cog")
             except Exception as e:
                 self.logger.error(f"Failed to load cog {cog_name}", exc_info=True)
 

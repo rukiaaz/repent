@@ -20,7 +20,8 @@
       "Exec(mv)",
       "Exec(git checkout)",
       "Exec(for file)",
-      "Exec(Get-ChildItem)"
+      "Exec(Get-ChildItem)",
+      "Exec(Move-Item)"
     ]
   }
 }

@@ -210,6 +210,45 @@ class MLSpamDetector:
                     self.spam_patterns[pattern] = min(1.0, self.spam_patterns[pattern] + self.learning_rate)
 
 
+class ViolationTracker:
+    """Track violations for enhanced security - faster escalation for repeat offenders."""
+    
+    def __init__(self):
+        # {guild_id: {user_id: [(timestamp, violation_type, severity)]}}
+        self._data = defaultdict(lambda: defaultdict(list))
+        self._lock = asyncio.Lock()
+    
+    async def add_violation(self, guild_id: int, user_id: int, violation_type: str, severity: int = 1):
+        """Add a violation record. Severity 1-3 (1=minor, 2=moderate, 3=severe)."""
+        async with self._lock:
+            now = datetime.now(timezone.utc)
+            self._data[guild_id][user_id].append((now, violation_type, severity))
+            
+            # Keep only last 50 violations per user
+            if len(self._data[guild_id][user_id]) > 50:
+                self._data[guild_id][user_id] = self._data[guild_id][user_id][-50:]
+    
+    async def get_severity_score(self, guild_id: int, user_id: int, window_minutes: int = 10) -> int:
+        """Calculate total severity score for a user within time window."""
+        async with self._lock:
+            now = datetime.now(timezone.utc)
+            cutoff = now - timedelta(minutes=window_minutes)
+            violations = [v for v in self._data[guild_id][user_id] if v[0] > cutoff]
+            return sum(v[2] for v in violations)
+    
+    async def cleanup(self):
+        """Remove violation records older than 1 hour."""
+        async with self._lock:
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=60)
+            for gid in list(self._data.keys()):
+                for uid in list(self._data[gid].keys()):
+                    self._data[gid][uid] = [v for v in self._data[gid][uid] if v[0] > cutoff]
+                    if not self._data[gid][uid]:
+                        del self._data[gid][uid]
+                if not self._data[gid]:
+                    del self._data[gid]
+
+
 class SpamTracker:
     """In-memory message rate tracker per guild per user."""
 
@@ -268,6 +307,7 @@ class AutoMod(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.spam_tracker = SpamTracker()
+        self.violation_tracker = ViolationTracker()  # Enhanced violation tracking
         self.ml_detector = MLSpamDetector()  # ML-based spam detection
         self.webhook_detector = WebhookThreatDetector()  # Advanced webhook threat detection
         self._cleanup_task = None
@@ -296,6 +336,7 @@ class AutoMod(commands.Cog):
         while not self.bot.is_closed():
             await asyncio.sleep(30)
             await self.spam_tracker.cleanup()
+            await self.violation_tracker.cleanup()  # Cleanup violation tracker
             
             # Cleanup webhook cache (remove entries older than TTL)
             cutoff = datetime.now(timezone.utc) - timedelta(seconds=self.webhook_cache_ttl)
@@ -616,6 +657,9 @@ class AutoMod(commands.Cog):
             # Check message rate
             spam_ids = await self.spam_tracker.check(guild.id, author.id, threshold, window)
             if spam_ids:
+                # Track violation for enhanced security
+                await self.violation_tracker.add_violation(guild.id, author.id, "spam", severity=3)
+                
                 await self._delete_messages(message.channel, spam_ids)
                 await self._punish_user(message, "anti_spam", "Spamming messages")
                 return
@@ -623,6 +667,9 @@ class AutoMod(commands.Cog):
             # Check duplicate content
             dup_ids = await self.spam_tracker.check_duplicates(guild.id, author.id, limit=3, window=10)
             if dup_ids:
+                # Track violation for enhanced security
+                await self.violation_tracker.add_violation(guild.id, author.id, "duplicate", severity=2)
+                
                 await self._delete_messages(message.channel, dup_ids)
                 await self._punish_user(message, "anti_spam_duplicate", "Sending duplicate messages")
                 return
@@ -648,19 +695,70 @@ class AutoMod(commands.Cog):
                             extra={"confidence": ml_analysis["confidence"], "details": ml_analysis["details"]})
                         return
 
-            # Check newlines (wall of text)
-            if content.count('\n') > 10:
-                try:
-                    await message.delete()
-                except Exception:
-                    pass
-                await self._punish_user(message, "anti_spam_newlines", "Wall of text (excessive newlines)")
-                return
+            # Check character limit
+            if config.get("char_limit_enabled", 1):
+                char_limit = config.get("char_limit", 3000)
+                if len(content) > char_limit:
+                    # Track violation for enhanced security
+                    await self.violation_tracker.add_violation(guild.id, author.id, "char_limit", severity=2)
+                    
+                    # Check if user is a repeat offender (fast escalation)
+                    severity_score = await self.violation_tracker.get_severity_score(guild.id, author.id, window_minutes=5)
+                    
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
+                    
+                    # Enhanced punishment for repeat offenders
+                    if severity_score >= 6:  # 3+ violations in 5 minutes
+                        # Skip to timeout/ban immediately
+                        await self._punish_user(message, "char_limit_repeat", f"Repeated character limit violations (Severity: {severity_score})")
+                    else:
+                        await self._punish_user(message, "char_limit", f"Message too long ({len(content)} > {char_limit} characters)")
+                    
+                    self.logger.security("CHAR_LIMIT_EXCEEDED", 
+                        f"User {author.id} exceeded character limit: {len(content)} > {char_limit}", 
+                        guild_id=guild.id, user_id=author.id,
+                        extra={"length": len(content), "limit": char_limit, "severity_score": severity_score})
+                    return
+
+            # Check line limit (enhanced wall of text detection)
+            if config.get("line_limit_enabled", 1):
+                line_limit = config.get("line_limit", 15)
+                line_count = content.count('\n') + 1  # +1 to count the first line
+                if line_count > line_limit:
+                    # Track violation for enhanced security
+                    await self.violation_tracker.add_violation(guild.id, author.id, "line_limit", severity=2)
+                    
+                    # Check if user is a repeat offender (fast escalation)
+                    severity_score = await self.violation_tracker.get_severity_score(guild.id, author.id, window_minutes=5)
+                    
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
+                    
+                    # Enhanced punishment for repeat offenders
+                    if severity_score >= 6:  # 3+ violations in 5 minutes
+                        # Skip to timeout/ban immediately
+                        await self._punish_user(message, "line_limit_repeat", f"Repeated line limit violations (Severity: {severity_score})")
+                    else:
+                        await self._punish_user(message, "line_limit", f"Wall of text ({line_count} > {line_limit} lines)")
+                    
+                    self.logger.security("LINE_LIMIT_EXCEEDED", 
+                        f"User {author.id} exceeded line limit: {line_count} > {line_limit}", 
+                        guild_id=guild.id, user_id=author.id,
+                        extra={"lines": line_count, "limit": line_limit, "severity_score": severity_score})
+                    return
             
             # Evasion technique detection
             evasion_detected = self.ml_detector.detect_evasion_techniques(content)
             if evasion_detected and config.get("anti_evasion", 1):
                 techniques = ", ".join(evasion_detected.keys())
+                # Track violation for enhanced security
+                await self.violation_tracker.add_violation(guild.id, author.id, "evasion", severity=3)
+                
                 try:
                     await message.delete()
                 except Exception:
@@ -676,6 +774,9 @@ class AutoMod(commands.Cog):
             lang_spam = self.ml_detector.detect_language_spam(content)
             if lang_spam and config.get("anti_lang_spam", 1):
                 languages = ", ".join(lang_spam)
+                # Track violation for enhanced security
+                await self.violation_tracker.add_violation(guild.id, author.id, "lang_spam", severity=2)
+                
                 try:
                     await message.delete()
                 except Exception:
@@ -694,6 +795,9 @@ class AutoMod(commands.Cog):
             total_mentions = user_mentions + role_mentions
             limit = config.get("mention_limit", 5)
             if total_mentions > limit:
+                # Track violation for enhanced security
+                await self.violation_tracker.add_violation(guild.id, author.id, "mass_mention", severity=3)
+                
                 try:
                     await message.delete()
                 except Exception:
@@ -1042,6 +1146,84 @@ class AutoMod(commands.Cog):
             embed=success_embed("Anti-Spam Updated", f"Anti-spam filter has been **{status}**."),
             ephemeral=False,
         )
+
+    @discord.app_commands.command(name="charlimit", description="Set character limit for messages (Admin only)")
+    @app_commands.describe(action="enable, disable, or set", limit="Maximum characters (for 'set' action)")
+    async def charlimit(self, interaction: discord.Interaction, action: str, limit: int = None):
+        if not interaction.user.guild_permissions.administrator:
+            return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
+
+        from database import update_automod_config, get_automod_config
+        
+        if action.lower() == "set":
+            if limit is None or limit < 100 or limit > 10000:
+                return await interaction.response.send_message(
+                    embed=error_embed("Invalid limit. Must be between 100 and 10000 characters."), 
+                    ephemeral=True
+                )
+            await update_automod_config(interaction.guild.id, char_limit=limit, char_limit_enabled=1)
+            await interaction.response.send_message(
+                embed=success_embed("Character Limit Set", f"Character limit has been set to **{limit}** characters."),
+                ephemeral=False,
+            )
+        elif action.lower() in ("enable", "on"):
+            await update_automod_config(interaction.guild.id, char_limit_enabled=1)
+            config = await get_automod_config(interaction.guild.id)
+            current_limit = config.get("char_limit", 3000)
+            await interaction.response.send_message(
+                embed=success_embed("Character Limit Enabled", f"Character limit has been enabled (**{current_limit}** characters)."),
+                ephemeral=False,
+            )
+        elif action.lower() in ("disable", "off"):
+            await update_automod_config(interaction.guild.id, char_limit_enabled=0)
+            await interaction.response.send_message(
+                embed=success_embed("Character Limit Disabled", "Character limit has been disabled."),
+                ephemeral=False,
+            )
+        else:
+            await interaction.response.send_message(
+                embed=error_embed("Invalid action. Use: enable, disable, or set."), 
+                ephemeral=True
+            )
+
+    @discord.app_commands.command(name="linelimit", description="Set line limit for messages (Admin only)")
+    @app_commands.describe(action="enable, disable, or set", limit="Maximum lines (for 'set' action)")
+    async def linelimit(self, interaction: discord.Interaction, action: str, limit: int = None):
+        if not interaction.user.guild_permissions.administrator:
+            return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
+
+        from database import update_automod_config, get_automod_config
+        
+        if action.lower() == "set":
+            if limit is None or limit < 5 or limit > 100:
+                return await interaction.response.send_message(
+                    embed=error_embed("Invalid limit. Must be between 5 and 100 lines."), 
+                    ephemeral=True
+                )
+            await update_automod_config(interaction.guild.id, line_limit=limit, line_limit_enabled=1)
+            await interaction.response.send_message(
+                embed=success_embed("Line Limit Set", f"Line limit has been set to **{limit}** lines."),
+                ephemeral=False,
+            )
+        elif action.lower() in ("enable", "on"):
+            await update_automod_config(interaction.guild.id, line_limit_enabled=1)
+            config = await get_automod_config(interaction.guild.id)
+            current_limit = config.get("line_limit", 15)
+            await interaction.response.send_message(
+                embed=success_embed("Line Limit Enabled", f"Line limit has been enabled (**{current_limit}** lines)."),
+                ephemeral=False,
+            )
+        elif action.lower() in ("disable", "off"):
+            await update_automod_config(interaction.guild.id, line_limit_enabled=0)
+            await interaction.response.send_message(
+                embed=success_embed("Line Limit Disabled", "Line limit has been disabled."),
+                ephemeral=False,
+            )
+        else:
+            await interaction.response.send_message(
+                embed=error_embed("Invalid action. Use: enable, disable, or set."), 
+                ephemeral=True
+            )
 
     @discord.app_commands.command(name="antiraid", description="Toggle anti-raid mode (Admin only)")
     @app_commands.describe(action="enable or disable")

@@ -158,7 +158,8 @@ GUILDS_ALLOWED_COLUMNS = {
 AUTOMOD_ALLOWED_COLUMNS = {
     "anti_spam", "anti_invite", "anti_link", "anti_caps", "anti_mention",
     "anti_emoji", "spam_threshold", "spam_window", "mention_limit",
-    "caps_percent", "emoji_limit"
+    "caps_percent", "emoji_limit", "char_limit_enabled", "char_limit",
+    "line_limit_enabled", "line_limit"
 }
 
 def _validate_column_names(columns: set, allowed_columns: set) -> bool:
@@ -651,7 +652,11 @@ async def init_db():
             spam_window INTEGER DEFAULT 5,
             mention_limit INTEGER DEFAULT 5,
             caps_percent INTEGER DEFAULT 70,
-            emoji_limit INTEGER DEFAULT 8
+            emoji_limit INTEGER DEFAULT 8,
+            char_limit_enabled INTEGER DEFAULT 1,
+            char_limit INTEGER DEFAULT 3000,
+            line_limit_enabled INTEGER DEFAULT 1,
+            line_limit INTEGER DEFAULT 15
         )""",
 
         # Bad words per guild
@@ -2018,8 +2023,8 @@ async def get_automod_config(guild_id: int) -> Dict[str, Any]:
         await db.execute(
             """INSERT INTO automod_config
                (guild_id, anti_spam, anti_invite, anti_link, anti_caps, anti_mention, anti_emoji,
-                spam_threshold, spam_window, mention_limit, caps_percent, emoji_limit)
-               VALUES (?, 1, 1, 0, 1, 1, 1, 5, 5, 5, 70, 8)""",
+                spam_threshold, spam_window, mention_limit, caps_percent, emoji_limit, char_limit_enabled, char_limit, line_limit_enabled, line_limit)
+               VALUES (?, 1, 1, 0, 1, 1, 1, 5, 5, 5, 70, 8, 1, 3000, 1, 15)""",
             (guild_id,),
         )
         await db.commit()

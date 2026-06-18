@@ -152,7 +152,7 @@ GUILDS_ALLOWED_COLUMNS = {
     "message_log_channel", "guild_log_channel", "all_message_log_channel",
     "voice_log_channel", "mod_log_channel", "custom_prefix", "automod_anti_nsfw",
     "log_voice_events", "log_thread_events", "log_role_events", "log_nickname_events",
-    "anti_token_enabled", "anti_token_sensitivity", "modmail_channel", "leveling_enabled"
+    "anti_token_enabled", "anti_token_sensitivity", "multi_layer_defense_enabled", "multi_layer_defense_sensitivity", "zero_trust_enabled", "zero_trust_threshold", "behavioral_analysis_enabled", "behavioral_analysis_sensitivity", "modmail_channel", "leveling_enabled"
 }
 
 AUTOMOD_ALLOWED_COLUMNS = {
@@ -361,6 +361,12 @@ async def init_db():
             log_nickname_events INTEGER DEFAULT 0,
             anti_token_enabled INTEGER DEFAULT 0,
             anti_token_sensitivity TEXT DEFAULT 'medium',
+            multi_layer_defense_enabled INTEGER DEFAULT 0,
+            multi_layer_defense_sensitivity TEXT DEFAULT 'medium',
+            zero_trust_enabled INTEGER DEFAULT 0,
+            zero_trust_threshold TEXT DEFAULT 'low',
+            behavioral_analysis_enabled INTEGER DEFAULT 0,
+            behavioral_analysis_sensitivity TEXT DEFAULT 'medium',
             leveling_enabled INTEGER DEFAULT 1
         )""",
 
@@ -811,6 +817,12 @@ async def init_db():
         ("log_nickname_events", "INTEGER DEFAULT 0"),
         ("anti_token_enabled", "INTEGER DEFAULT 0"),
         ("anti_token_sensitivity", "TEXT DEFAULT 'medium'"),
+        ("multi_layer_defense_enabled", "INTEGER DEFAULT 0"),
+        ("multi_layer_defense_sensitivity", "TEXT DEFAULT 'medium'"),
+        ("zero_trust_enabled", "INTEGER DEFAULT 0"),
+        ("zero_trust_threshold", "TEXT DEFAULT 'low'"),
+        ("behavioral_analysis_enabled", "INTEGER DEFAULT 0"),
+        ("behavioral_analysis_sensitivity", "TEXT DEFAULT 'medium'"),
         ("modmail_channel", "INTEGER DEFAULT 0"),
     ]
     for col_name, col_def in columns_to_add:

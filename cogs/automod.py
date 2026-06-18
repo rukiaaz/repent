@@ -1,6 +1,7 @@
 """
 Repent - AutoMod System
 Message-based automod: anti-spam, anti-invite, anti-mention, anti-caps, bad words, etc.
+Enhanced with ML-based pattern recognition and adaptive filtering.
 """
 
 import re
@@ -10,6 +11,9 @@ from discord.ext import commands
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import asyncio
+from typing import Dict, List, Set, Tuple
+import difflib
+import unicodedata
 
 from database import (
     get_automod_config, get_bad_words, get_ignored_channels,
@@ -18,6 +22,7 @@ from database import (
 from utils.embeds import alert_embed, success_embed, error_embed, info_embed
 from config import OWNER_ID
 from utils.logger import get_logger
+from utils.webhook_security import WebhookThreatDetector
 
 
 INVITE_REGEX = re.compile(r"(discord\.gg\/[a-zA-Z0-9\-]+|discord(?:app)?\.com\/invite\/[a-zA-Z0-9\-]+)", re.IGNORECASE)
@@ -25,6 +30,184 @@ URL_REGEX = re.compile(r"https?://[^\s]+", re.IGNORECASE)
 MENTION_REGEX = re.compile(r"<@!?(\d+)>")
 ROLE_MENTION_REGEX = re.compile(r"<@&(\d+)>")
 EMOJI_REGEX = re.compile(r"<a?:\w+:\d+>")
+
+
+class MLSpamDetector:
+    """ML-based spam detection with pattern recognition and adaptive learning."""
+    
+    def __init__(self):
+        # Spam patterns learned from detection
+        self.spam_patterns: Dict[str, float] = {}  # pattern -> confidence score
+        self.ham_patterns: Dict[str, float] = {}  # legitimate patterns -> confidence
+        
+        # Evasion techniques
+        self.evasion_patterns = {
+            'leetspeak': r'[4@]|\[3\]|\/\\/\|/',
+            'zero_width': r'[\u200B-\u200D\uFEFF]',
+            'homoglyphs': r'[а-я]',  # Cyrillic characters that look like Latin
+            'repetition': r'(.)\1{4,}',  # 5+ repeated characters
+            'spaces': r'\s{3,}',  # 3+ consecutive spaces
+        }
+        
+        # Multi-language spam indicators
+        self.language_indicators = {
+            'chinese_spam': r'[\u4e00-\u9fff]{5,}',  # 5+ Chinese characters
+            'arabic_spam': r'[\u0600-\u06ff]{5,}',  # 5+ Arabic characters
+            'cyrillic_spam': r'[\u0400-\u04ff]{5,}',  # 5+ Cyrillic characters
+        }
+        
+        # Content similarity threshold for duplicate detection
+        self.similarity_threshold = 0.85
+        
+        # Learning parameters
+        self.learning_rate = 0.1
+        self.false_positive_memory: Dict[str, int] = {}  # content -> false positive count
+        self.false_negative_memory: Dict[str, int] = {}  # content -> false negative count
+    
+    def calculate_text_similarity(self, text1: str, text2: str) -> float:
+        """Calculate similarity between two texts using sequence matching."""
+        # Normalize texts
+        text1 = self.normalize_text(text1)
+        text2 = self.normalize_text(text2)
+        
+        if not text1 or not text2:
+            return 0.0
+        
+        # Use difflib for sequence matching
+        similarity = difflib.SequenceMatcher(None, text1, text2).ratio()
+        return similarity
+    
+    def normalize_text(self, text: str) -> str:
+        """Normalize text for comparison by removing common evasion techniques."""
+        # Remove zero-width characters
+        text = re.sub(self.evasion_patterns['zero_width'], '', text)
+        
+        # Normalize unicode characters
+        text = unicodedata.normalize('NFKC', text)
+        
+        # Convert to lowercase
+        text = text.lower()
+        
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return text
+    
+    def detect_evasion_techniques(self, text: str) -> Dict[str, bool]:
+        """Detect various evasion techniques used in spam."""
+        detected = {}
+        
+        for technique, pattern in self.evasion_patterns.items():
+            if re.search(pattern, text):
+                detected[technique] = True
+        
+        return detected
+    
+    def detect_language_spam(self, text: str) -> List[str]:
+        """Detect spam in non-Latin scripts."""
+        detected = []
+        
+        for language, pattern in self.language_indicators.items():
+            if re.search(pattern, text):
+                detected.append(language)
+        
+        return detected
+    
+    def analyze_message_patterns(self, messages: List[str]) -> Dict[str, any]:
+        """Analyze patterns across multiple messages for spam detection."""
+        if len(messages) < 2:
+            return {"is_spam": False, "confidence": 0.0, "reason": "Not enough messages"}
+        
+        analysis = {
+            "avg_length": sum(len(m) for m in messages) / len(messages),
+            "length_variance": max(len(m) for m in messages) - min(len(m) for m in messages),
+            "similar_messages": 0,
+            "evasion_techniques": defaultdict(int),
+            "language_spam": defaultdict(int),
+        }
+        
+        # Check for similar messages
+        for i in range(len(messages)):
+            for j in range(i + 1, len(messages)):
+                similarity = self.calculate_text_similarity(messages[i], messages[j])
+                if similarity >= self.similarity_threshold:
+                    analysis["similar_messages"] += 1
+        
+        # Analyze evasion techniques
+        for message in messages:
+            evasion = self.detect_evasion_techniques(message)
+            for technique in evasion:
+                analysis["evasion_techniques"][technique] += 1
+            
+            # Check for language spam
+            lang_spam = self.detect_language_spam(message)
+            for language in lang_spam:
+                analysis["language_spam"][language] += 1
+        
+        # Calculate spam confidence
+        spam_confidence = 0.0
+        
+        # High similarity indicates spam
+        if analysis["similar_messages"] >= len(messages) * 0.7:
+            spam_confidence += 0.4
+        
+        # Low variance with high similarity is suspicious
+        if analysis["length_variance"] < 20 and analysis["similar_messages"] >= len(messages) * 0.5:
+            spam_confidence += 0.3
+        
+        # Evasion techniques increase suspicion
+        evasion_count = sum(analysis["evasion_techniques"].values())
+        if evasion_count > 0:
+            spam_confidence += min(evasion_count / len(messages) * 0.2, 0.2)
+        
+        # Non-Latin script spam
+        lang_spam_count = sum(analysis["language_spam"].values())
+        if lang_spam_count > 0:
+            spam_confidence += min(lang_spam_count / len(messages) * 0.1, 0.1)
+        
+        return {
+            "is_spam": spam_confidence >= 0.5,
+            "confidence": spam_confidence,
+            "reason": self._get_spam_reason(analysis),
+            "details": analysis
+        }
+    
+    def _get_spam_reason(self, analysis: dict) -> str:
+        """Generate human-readable reason for spam detection."""
+        reasons = []
+        
+        if analysis["similar_messages"] >= 2:
+            reasons.append(f"Similar messages detected: {analysis['similar_messages']}")
+        
+        if analysis["length_variance"] < 20:
+            reasons.append("Low message length variance")
+        
+        if analysis["evasion_techniques"]:
+            techniques = ", ".join(analysis["evasion_techniques"].keys())
+            reasons.append(f"Evasion techniques: {techniques}")
+        
+        if analysis["language_spam"]:
+            languages = ", ".join(analysis["language_spam"].keys())
+            reasons.append(f"Non-Latin spam: {languages}")
+        
+        return "; ".join(reasons) if reasons else "Pattern-based detection"
+    
+    def learn_from_feedback(self, content: str, is_false_positive: bool):
+        """Learn from false positives/negatives to improve detection."""
+        normalized = self.normalize_text(content)
+        
+        if is_false_positive:
+            self.false_positive_memory[normalized] = self.false_positive_memory.get(normalized, 0) + 1
+            # Reduce confidence for similar patterns
+            for pattern in list(self.spam_patterns.keys()):
+                if self.calculate_text_similarity(normalized, pattern) > 0.7:
+                    self.spam_patterns[pattern] = max(0, self.spam_patterns[pattern] - self.learning_rate)
+        else:
+            self.false_negative_memory[normalized] = self.false_negative_memory.get(normalized, 0) + 1
+            # Increase confidence for similar patterns
+            for pattern in list(self.spam_patterns.keys()):
+                if self.calculate_text_similarity(normalized, pattern) > 0.7:
+                    self.spam_patterns[pattern] = min(1.0, self.spam_patterns[pattern] + self.learning_rate)
 
 
 class SpamTracker:
@@ -85,9 +268,14 @@ class AutoMod(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.spam_tracker = SpamTracker()
+        self.ml_detector = MLSpamDetector()  # ML-based spam detection
+        self.webhook_detector = WebhookThreatDetector()  # Advanced webhook threat detection
         self._cleanup_task = None
         self._alert_cooldowns = {}
         self.logger = get_logger()
+        
+        # Per-guild message history for pattern analysis
+        self.message_history: Dict[int, Dict[int, List[str]]] = {}  # guild_id -> user_id -> [messages]
 
     async def cog_load(self):
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
@@ -101,6 +289,22 @@ class AutoMod(commands.Cog):
         while not self.bot.is_closed():
             await asyncio.sleep(30)
             await self.spam_tracker.cleanup()
+            
+            # Cleanup message history (remove entries older than 1 hour)
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=60)
+            for guild_id in list(self.message_history.keys()):
+                for user_id in list(self.message_history[guild_id].keys()):
+                    # Keep only recent messages (simplified cleanup)
+                    if len(self.message_history[guild_id][user_id]) > 10:
+                        self.message_history[guild_id][user_id] = self.message_history[guild_id][user_id][-10:]
+                    
+                    # Remove empty user entries
+                    if not self.message_history[guild_id][user_id]:
+                        del self.message_history[guild_id][user_id]
+                
+                # Remove empty guild entries
+                if not self.message_history[guild_id]:
+                    del self.message_history[guild_id]
 
     async def _should_ignore(self, message: discord.Message, module: str = "automod") -> bool:
         """Check if message should be ignored by AutoMod."""
@@ -190,6 +394,13 @@ class AutoMod(commands.Cog):
 
         # ── Webhook Special Handling ──
         if message.webhook_id:
+            # Track webhook message for analysis
+            self.webhook_detector.track_webhook_message(message.webhook_id, content, author.id)
+            
+            # Advanced webhook threat detection
+            content_threat = self.webhook_detector.analyze_content_threat(content)
+            behavior_threat = self.webhook_detector.analyze_webhook_behavior(message.webhook_id)
+            
             action = "Webhook Message Deleted"
             try:
                 webhook = await self.bot.fetch_webhook(message.webhook_id)
@@ -205,14 +416,57 @@ class AutoMod(commands.Cog):
                         if creator_whitelist and creator_whitelist.get('trust_level', 0) >= 1:
                             is_trusted_webhook = True
                     
-                    # Only delete webhook if it's not trusted AND message violates rules
+                    # Check rate limits
+                    rate_limited, rate_reason = self.webhook_detector.check_rate_limit(message.webhook_id)
+                    
+                    # Determine action based on threat levels and trust
+                    should_delete_webhook = False
+                    should_delete_message = True
+                    
                     if not is_trusted_webhook:
-                        await webhook.delete(reason=f"[Repent AutoMod] Webhook deleted for rule violation: {reason}")
-                        action = "Webhook Deleted (Security Risk)"
-                        self.logger.webhook_event("DELETE", guild.id, f"Webhook {webhook.id} deleted for automod violation: {rule}")
-                    else:
-                        action = "Trusted Webhook Message Deleted (Webhook Preserved)"
+                        # Check for critical threats
+                        if content_threat['threat_level'] == 'CRITICAL' or behavior_threat['risk_level'] == 'CRITICAL':
+                            should_delete_webhook = True
+                            self.webhook_detector.record_violation(message.webhook_id, "critical_threat")
+                        
+                        # Check if rate limited
+                        elif not rate_limited:
+                            should_delete_webhook = True
+                            self.webhook_detector.record_violation(message.webhook_id, "rate_limit_exceeded")
+                        
+                        # Check for high threat levels
+                        elif content_threat['threat_level'] == 'HIGH' or behavior_threat['risk_level'] == 'HIGH':
+                            should_delete_webhook = True
+                            self.webhook_detector.record_violation(message.webhook_id, "high_risk_behavior")
+                    
+                    # Execute actions
+                    if should_delete_webhook:
+                        await webhook.delete(reason=f"[Repent AutoMod] Webhook deleted for security violation: {reason}")
+                        action = f"Webhook Deleted (Security Risk: {reason})"
+                        self.logger.security("WEBHOOK_DELETE", 
+                            f"Webhook {webhook.id} deleted - Content Threat: {content_threat['threat_level']}, Behavior Risk: {behavior_threat['risk_level']}", 
+                            guild_id=guild.id, extra={
+                                "webhook_id": webhook.id, 
+                                "content_threat": content_threat, 
+                                "behavior_threat": behavior_threat,
+                                "rate_limited": not rate_limited,
+                                "rate_reason": rate_reason
+                            })
+                    elif is_trusted_webhook:
+                        action = f"Trusted Webhook Message Deleted (Webhook Preserved) - {reason}"
                         self.logger.warning(f"Trusted webhook {webhook.id} violated automod but was preserved")
+                    else:
+                        action = f"Webhook Message Deleted (Safe Webhook Preserved) - {reason}"
+                    
+                    # Log detailed threat analysis
+                    if content_threat['is_threat'] or behavior_threat['is_suspicious']:
+                        await log_action(guild.id, "webhook_threat_detected", webhook.id, {
+                            "content_threat": content_threat,
+                            "behavior_threat": behavior_threat,
+                            "rule_violated": rule,
+                            "reason": reason
+                        })
+                        
             except Exception as e:
                 action = f"Webhook Message Deleted (Webhook fetch failed: {e})"
                 self.logger.error(f"Failed to fetch/delete webhook {message.webhook_id}", exc_info=True)
@@ -278,6 +532,17 @@ class AutoMod(commands.Cog):
             window = config.get("spam_window", 5)
             await self.spam_tracker.add(guild.id, author.id, message.id, content)
 
+            # Add to message history for ML analysis
+            if guild.id not in self.message_history:
+                self.message_history[guild.id] = {}
+            if author.id not in self.message_history[guild.id]:
+                self.message_history[guild.id][author.id] = []
+            self.message_history[guild.id][author.id].append(content)
+            
+            # Keep only last 20 messages per user
+            if len(self.message_history[guild.id][author.id]) > 20:
+                self.message_history[guild.id][author.id] = self.message_history[guild.id][author.id][-20:]
+
             # Check message rate
             spam_ids = await self.spam_tracker.check(guild.id, author.id, threshold, window)
             if spam_ids:
@@ -292,6 +557,27 @@ class AutoMod(commands.Cog):
                 await self._punish_user(message, "anti_spam_duplicate", "Sending duplicate messages")
                 return
 
+            # ML-based pattern detection
+            user_messages = self.message_history[guild.id].get(author.id, [])
+            if len(user_messages) >= 3:  # Need at least 3 messages for pattern analysis
+                ml_analysis = self.ml_detector.analyze_message_patterns(user_messages)
+                if ml_analysis["is_spam"] and ml_analysis["confidence"] > 0.7:
+                    # Get recent message IDs to delete
+                    recent_msg_ids = []
+                    async for msg in message.channel.history(limit=10):
+                        if msg.author == author:
+                            recent_msg_ids.append(msg.id)
+                    
+                    if recent_msg_ids:
+                        await self._delete_messages(message.channel, recent_msg_ids)
+                        await self._punish_user(message, "ml_spam_detection", 
+                            f"ML pattern detection: {ml_analysis['reason']} (Confidence: {ml_analysis['confidence']:.2f})")
+                        self.logger.security("ML_SPAM_DETECTION", 
+                            f"ML detected spam: {ml_analysis['reason']}", 
+                            guild_id=guild.id, user_id=author.id,
+                            extra={"confidence": ml_analysis["confidence"], "details": ml_analysis["details"]})
+                        return
+
             # Check newlines (wall of text)
             if content.count('\n') > 10:
                 try:
@@ -299,6 +585,36 @@ class AutoMod(commands.Cog):
                 except Exception:
                     pass
                 await self._punish_user(message, "anti_spam_newlines", "Wall of text (excessive newlines)")
+                return
+            
+            # Evasion technique detection
+            evasion_detected = self.ml_detector.detect_evasion_techniques(content)
+            if evasion_detected and config.get("anti_evasion", 1):
+                techniques = ", ".join(evasion_detected.keys())
+                try:
+                    await message.delete()
+                except Exception:
+                    pass
+                await self._punish_user(message, "evasion_techniques", f"Evasion techniques detected: {techniques}")
+                self.logger.security("EVASION_DETECTED", 
+                    f"Evasion techniques: {techniques}", 
+                    guild_id=guild.id, user_id=author.id,
+                    extra={"techniques": list(evasion_detected.keys())})
+                return
+            
+            # Multi-language spam detection
+            lang_spam = self.ml_detector.detect_language_spam(content)
+            if lang_spam and config.get("anti_lang_spam", 1):
+                languages = ", ".join(lang_spam)
+                try:
+                    await message.delete()
+                except Exception:
+                    pass
+                await self._punish_user(message, "language_spam", f"Non-Latin spam detected: {languages}")
+                self.logger.security("LANGUAGE_SPAM", 
+                    f"Language spam: {languages}", 
+                    guild_id=guild.id, user_id=author.id,
+                    extra={"languages": lang_spam})
                 return
 
         # ── Anti-Mass-Mention ──

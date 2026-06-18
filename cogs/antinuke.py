@@ -48,6 +48,8 @@ from utils.embeds import antinuke_embed, error_embed, info_embed, success_embed
 from utils.cache import snapshot_guild
 from utils.logger import get_logger
 from utils.enhanced_restore import EnhancedRestoreSystem, ConsecutiveAttackDetector
+from utils.cross_guild_security import CrossGuildSecurityCorrelation
+from utils.unified_cache import security_cache, cached
 
 
 class InMemoryRateTracker:
@@ -171,6 +173,9 @@ class Antinuke(commands.Cog):
         
         # Enhanced restore system for consecutive nuke protection
         self.enhanced_restore = EnhancedRestoreSystem(bot, self.logger)
+        
+        # Cross-guild attack correlation system
+        self.cross_guild_security = CrossGuildSecurityCorrelation()
         
         # Whitelist result cache: {(guild_id, user_id): (result, timestamp)}
         self._whitelist_cache: Dict[Tuple[int, int], Tuple[bool, datetime]] = {}

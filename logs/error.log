@@ -644,3 +644,299 @@ Traceback (most recent call last):
   File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\http.py", line 752, in request
     raise Forbidden(response, data)
 discord.errors.Forbidden: 403 Forbidden (error code: 50278): Cannot send messages to this user due to having no mutual guilds
+2026-06-18 22:03:56 - Repent - ERROR - Failed to load cog cogs.behavioral_analysis
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\repentv3\cogs\behavioral_analysis.py", line 17, in <module>
+    class BehavioralAnalysis(commands.Cog):
+    ...<143 lines>...
+                )
+  File "D:\repentv3\cogs\behavioral_analysis.py", line 25, in BehavioralAnalysis
+    @app_commands.command(name="behavior", description="Configure behavioral analysis")
+     ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 2060, in decorator
+    return Command(
+        name=name if name is not MISSING else func.__name__,
+    ...<5 lines>...
+        extras=extras,
+    )
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 687, in __init__
+    self._params: Dict[str, CommandParameter] = _extract_parameters_from_callback(callback, callback.__globals__)
+                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 367, in _extract_parameters_from_callback
+    params = inspect.signature(func).parameters
+             ~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 3323, in signature
+    return Signature.from_callable(obj, follow_wrapped=follow_wrapped,
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                   globals=globals, locals=locals, eval_str=eval_str,
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                   annotation_format=annotation_format)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 3038, in from_callable
+    return _signature_from_callable(obj, sigcls=cls,
+                                    follow_wrapper_chains=follow_wrapped,
+                                    globals=globals, locals=locals, eval_str=eval_str,
+                                    annotation_format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 2512, in _signature_from_callable
+    return _signature_from_function(sigcls, obj,
+                                    skip_bound_arg=skip_bound_arg,
+                                    globals=globals, locals=locals, eval_str=eval_str,
+                                    annotation_format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 2335, in _signature_from_function
+    annotations = get_annotations(func, globals=globals, locals=locals, eval_str=eval_str,
+                                  format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\annotationlib.py", line 987, in get_annotations
+    ann = _get_dunder_annotations(obj)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\annotationlib.py", line 1180, in _get_dunder_annotations
+    ann = getattr(obj, "__annotations__", None)
+  File "D:\repentv3\cogs\behavioral_analysis.py", line 32, in __annotate__
+    value: Optional[str] = None
+           ^^^^^^^^
+NameError: name 'Optional' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.behavioral_analysis' raised an error: NameError: name 'Optional' is not defined
+2026-06-18 22:03:56 - Repent - ERROR - Failed to load cog cogs.multilayer_defense
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\repentv3\cogs\multilayer_defense.py", line 18, in <module>
+    class MultiLayerDefense(commands.Cog):
+    ...<139 lines>...
+                )
+  File "D:\repentv3\cogs\multilayer_defense.py", line 27, in MultiLayerDefense
+    @app_commands.command(name="defense", description="Configure multi-layer defense")
+     ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 2060, in decorator
+    return Command(
+        name=name if name is not MISSING else func.__name__,
+    ...<5 lines>...
+        extras=extras,
+    )
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 687, in __init__
+    self._params: Dict[str, CommandParameter] = _extract_parameters_from_callback(callback, callback.__globals__)
+                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 367, in _extract_parameters_from_callback
+    params = inspect.signature(func).parameters
+             ~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 3323, in signature
+    return Signature.from_callable(obj, follow_wrapped=follow_wrapped,
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                   globals=globals, locals=locals, eval_str=eval_str,
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                   annotation_format=annotation_format)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 3038, in from_callable
+    return _signature_from_callable(obj, sigcls=cls,
+                                    follow_wrapper_chains=follow_wrapped,
+                                    globals=globals, locals=locals, eval_str=eval_str,
+                                    annotation_format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 2512, in _signature_from_callable
+    return _signature_from_function(sigcls, obj,
+                                    skip_bound_arg=skip_bound_arg,
+                                    globals=globals, locals=locals, eval_str=eval_str,
+                                    annotation_format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 2335, in _signature_from_function
+    annotations = get_annotations(func, globals=globals, locals=locals, eval_str=eval_str,
+                                  format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\annotationlib.py", line 987, in get_annotations
+    ann = _get_dunder_annotations(obj)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\annotationlib.py", line 1180, in _get_dunder_annotations
+    ann = getattr(obj, "__annotations__", None)
+  File "D:\repentv3\cogs\multilayer_defense.py", line 34, in __annotate__
+    value: Optional[str] = None
+           ^^^^^^^^
+NameError: name 'Optional' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.multilayer_defense' raised an error: NameError: name 'Optional' is not defined
+2026-06-18 22:03:56 - Repent - ERROR - Failed to load cog cogs.security_scanner
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\repentv3\cogs\security_scanner.py", line 292, in setup
+    await bot.add_cog(SecurityScanner(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 407, in add_command
+    raise CommandAlreadyRegistered(name, None)
+discord.app_commands.errors.CommandAlreadyRegistered: Command 'antitoken' already registered.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.security_scanner' raised an error: CommandAlreadyRegistered: Command 'antitoken' already registered.
+2026-06-18 22:03:56 - Repent - ERROR - Failed to load cog cogs.verification
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\repentv3\cogs\verification.py", line 318, in setup
+    await bot.add_cog(Verification(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.verification' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-18 22:03:56 - Repent - ERROR - Failed to load cog cogs.welcome
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 963, in _load_from_module_spec
+    await setup(self)
+  File "D:\repentv3\cogs\welcome.py", line 295, in setup
+    await bot.add_cog(Welcome(bot))
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 799, in add_cog
+    cog = await cog._inject(self, override=override, guild=guild, guilds=guilds)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\cog.py", line 745, in _inject
+    bot.tree.add_command(command, override=override, guild=guild, guilds=guilds)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\tree.py", line 411, in add_command
+    raise CommandLimitReached(guild_id=None, limit=100)
+discord.app_commands.errors.CommandLimitReached: maximum number of slash commands exceeded 100 globally
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 968, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.welcome' raised an error: CommandLimitReached: maximum number of slash commands exceeded 100 globally
+2026-06-18 22:03:56 - Repent - ERROR - Failed to load cog cogs.zerotrust
+Traceback (most recent call last):
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 951, in _load_from_module_spec
+    spec.loader.exec_module(lib)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "D:\repentv3\cogs\zerotrust.py", line 17, in <module>
+    class ZeroTrustSecurity(commands.Cog):
+    ...<142 lines>...
+                )
+  File "D:\repentv3\cogs\zerotrust.py", line 25, in ZeroTrustSecurity
+    @app_commands.command(name="zerotrust", description="Configure zero-trust security")
+     ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 2060, in decorator
+    return Command(
+        name=name if name is not MISSING else func.__name__,
+    ...<5 lines>...
+        extras=extras,
+    )
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 687, in __init__
+    self._params: Dict[str, CommandParameter] = _extract_parameters_from_callback(callback, callback.__globals__)
+                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\app_commands\commands.py", line 367, in _extract_parameters_from_callback
+    params = inspect.signature(func).parameters
+             ~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 3323, in signature
+    return Signature.from_callable(obj, follow_wrapped=follow_wrapped,
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                   globals=globals, locals=locals, eval_str=eval_str,
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                   annotation_format=annotation_format)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 3038, in from_callable
+    return _signature_from_callable(obj, sigcls=cls,
+                                    follow_wrapper_chains=follow_wrapped,
+                                    globals=globals, locals=locals, eval_str=eval_str,
+                                    annotation_format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 2512, in _signature_from_callable
+    return _signature_from_function(sigcls, obj,
+                                    skip_bound_arg=skip_bound_arg,
+                                    globals=globals, locals=locals, eval_str=eval_str,
+                                    annotation_format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\inspect.py", line 2335, in _signature_from_function
+    annotations = get_annotations(func, globals=globals, locals=locals, eval_str=eval_str,
+                                  format=annotation_format)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\annotationlib.py", line 987, in get_annotations
+    ann = _get_dunder_annotations(obj)
+  File "C:\Users\NIGS\AppData\Local\Programs\Python\Python314\Lib\annotationlib.py", line 1180, in _get_dunder_annotations
+    ann = getattr(obj, "__annotations__", None)
+  File "D:\repentv3\cogs\zerotrust.py", line 32, in __annotate__
+    value: Optional[str] = None
+           ^^^^^^^^
+NameError: name 'Optional' is not defined
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\repentv3\main.py", line 87, in setup_hook
+    await self.load_extension(cog_name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 1029, in load_extension
+    await self._load_from_module_spec(spec, name)
+  File "C:\Users\NIGS\AppData\Roaming\Python\Python314\site-packages\discord\ext\commands\bot.py", line 954, in _load_from_module_spec
+    raise errors.ExtensionFailed(key, e) from e
+discord.ext.commands.errors.ExtensionFailed: Extension 'cogs.zerotrust' raised an error: NameError: name 'Optional' is not defined
+2026-06-18 22:14:01 - Repent - ERROR - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    if old_security_events:
+       ^^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 22:24:01 - Repent - ERROR - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    if old_security_events:
+       ^^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 22:34:01 - Repent - ERROR - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    safe_admins_cutoff = datetime.now(timezone.utc) - timedelta(seconds=self._safe_admins_cache_ttl)
+       ^^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 22:44:01 - Repent - ERROR - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    # Check basic guild permissions first
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value

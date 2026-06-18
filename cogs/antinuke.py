@@ -226,6 +226,14 @@ class Antinuke(commands.Cog):
         # Attack detection timestamps per guild
         self._attack_detected_time: Dict[int, datetime] = {}
         
+        # Emergency mode configuration
+        self._emergency_mode_config = {
+            "auto_activate": True,  # Automatically activate on suspicious patterns
+            "duration_minutes": 10,  # How long emergency mode stays active
+            "max_whitelist_bypass": True,  # Allow whitelist bypass in emergency mode
+            "rate_limit_bypass": True,  # Bypass rate limits in emergency mode
+        }
+        
         # Event deduplication: {(guild_id, user_id, action_type, target_id): timestamp}
         self._processed_events: Dict[Tuple[int, int, str, int], datetime] = {}
         
@@ -234,14 +242,19 @@ class Antinuke(commands.Cog):
         
         # API rate limiting for audit log queries (token bucket algorithm)
         self._audit_log_rate_limiter: Dict[int, Dict[str, float]] = {}  # guild_id -> {tokens: float, last_update: float}
-        self._audit_log_rate_limit = 5  # 5 queries per second per guild (increased from 1)
-        self._audit_log_burst_size = 10  # Allow burst of 10 queries
+        self._audit_log_rate_limit = 2  # 2 queries per second per guild (reduced from 5 to respect Discord's limits)
+        self._audit_log_burst_size = 5  # Allow burst of 5 queries (reduced from 10)
         
-        # Discord API rate limit tracking (global buckets) - OPTIMIZED FOR MAXIMUM SECURITY
+        # Discord API rate limit tracking (global buckets) - IMPROVED FOR BETTER RATE LIMIT COMPLIANCE
         self._discord_api_buckets = {
-            "guild": {"tokens": 50, "last_update": time.time(), "rate": 50, "window": 1},  # 50 requests per second
-            "webhook": {"tokens": 10, "last_update": time.time(), "rate": 10, "window": 1},  # Increased to 10 for faster webhook deletion
+            "guild": {"tokens": 20, "last_update": time.time(), "rate": 20, "window": 1},  # 20 requests per second (reduced from 50)
+            "webhook": {"tokens": 5, "last_update": time.time(), "rate": 5, "window": 1},  # 5 requests per second (reduced from 10)
+            "message": {"tokens": 10, "last_update": time.time(), "rate": 10, "window": 1},  # 10 messages per second
+            "audit_log": {"tokens": 2, "last_update": time.time(), "rate": 2, "window": 1},  # 2 audit log requests per second
         }
+        
+        # Exponential backoff tracking for rate limit handling
+        self._rate_limit_backoff: Dict[str, float] = {}  # bucket_name -> backoff_until_time
         
         # Graceful degradation: component health status
         self._component_health: Dict[str, bool] = {
@@ -358,13 +371,25 @@ class Antinuke(commands.Cog):
             except Exception as e:
                 self.logger.error(f"Priority task worker error: {e}", exc_info=True)
     
-    async def _wait_for_discord_api_quota(self, bucket_name: str = "guild") -> None:
-        """Wait for Discord API quota using token bucket algorithm."""
+    async def _wait_for_discord_api_quota(self, bucket_name: str = "guild", priority: bool = False) -> None:
+        """Wait for Discord API quota using token bucket algorithm with exponential backoff."""
         async with self._lock:
             now = time.time()
             
             if bucket_name not in self._discord_api_buckets:
                 return  # Unknown bucket, skip rate limiting
+            
+            # Check if we're in backoff period for this bucket
+            if bucket_name in self._rate_limit_backoff:
+                if now < self._rate_limit_backoff[bucket_name]:
+                    backoff_remaining = self._rate_limit_backoff[bucket_name] - now
+                    self.logger.warning(f"Rate limit backoff active for {bucket_name}: {backoff_remaining:.2f}s remaining")
+                    if not priority:  # Only wait if not high priority
+                        await asyncio.sleep(min(backoff_remaining, 5.0))  # Max 5 second wait
+                    return
+                else:
+                    # Backoff period expired, remove it
+                    del self._rate_limit_backoff[bucket_name]
             
             bucket = self._discord_api_buckets[bucket_name]
             
@@ -377,10 +402,45 @@ class Antinuke(commands.Cog):
             if bucket["tokens"] < 1:
                 wait_time = (1 - bucket["tokens"]) / bucket["rate"]
                 if wait_time > 0:
-                    await asyncio.sleep(min(wait_time, 0.05))  # Max 50ms wait
+                    # Increased max wait time and added logging
+                    actual_wait = min(wait_time, 2.0)  # Max 2 second wait (increased from 50ms)
+                    if actual_wait > 0.1:  # Only log significant waits
+                        self.logger.debug(f"Rate limiting {bucket_name}: waiting {actual_wait:.2f}s")
+                    await asyncio.sleep(actual_wait)
             
             # Consume a token
             bucket["tokens"] -= 1
+    
+    async def _handle_rate_limit_error(self, bucket_name: str = "guild", retry_after: float = None):
+        """Handle rate limit errors with exponential backoff."""
+        async with self._lock:
+            now = time.time()
+            
+            # Calculate backoff time with exponential increase
+            current_backoff = self._rate_limit_backoff.get(bucket_name, now)
+            if retry_after:
+                # Use Discord's retry-after if provided
+                backoff_time = retry_after
+            else:
+                # Exponential backoff: start at 1 second, double each time, max 30 seconds
+                if bucket_name in self._rate_limit_backoff:
+                    elapsed = now - current_backoff
+                    if elapsed > 0:
+                        # We've waited the backoff period, reset
+                        backoff_time = 1.0
+                    else:
+                        # Still in backoff, double the time
+                        backoff_time = min(30.0, abs(elapsed) * 2)
+                else:
+                    backoff_time = 1.0
+            
+            self._rate_limit_backoff[bucket_name] = now + backoff_time
+            self.logger.warning(f"Rate limit hit for {bucket_name}, backing off for {backoff_time:.2f}s")
+            
+            # Reset bucket tokens to prevent immediate hammering
+            if bucket_name in self._discord_api_buckets:
+                self._discord_api_buckets[bucket_name]["tokens"] = 0
+                self._discord_api_buckets[bucket_name]["last_update"] = now
     
     async def run_benchmark(self, iterations: int = 100) -> Dict[str, float]:
         """Run performance benchmark for antinuke operations."""
@@ -605,8 +665,91 @@ class Antinuke(commands.Cog):
             else:
                 return False
 
+    async def activate_emergency_lockdown(self, guild_id: int, reason: str = "Security threat detected") -> None:
+        """Activate emergency lockdown mode for a guild during active attacks.
+        
+        This provides maximum security by:
+        - Bypassing all whitelist checks
+        - Bypassing rate limits for critical actions
+        - Enabling maximum punishment severity
+        - Activating enhanced monitoring
+        """
+        async with self._lock:
+            if guild_id in self._emergency_mode_active:
+                return  # Already in emergency mode
+            
+            self._emergency_mode_active.add(guild_id)
+            self._attack_detected_time[guild_id] = datetime.now(timezone.utc)
+        
+        self.logger.security(
+            "EMERGENCY_LOCKDOWN_ACTIVATED",
+            f"Emergency lockdown activated for guild {guild_id}. Reason: {reason}",
+            guild_id=guild_id
+        )
+        
+        # Take immediate protective actions
+        try:
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                return
+            
+            # Log the emergency activation to database
+            await log_action(guild_id, "emergency_lockdown", self.bot.user.id if self.bot.user else 0, {
+                "reason": reason,
+                "activated_at": datetime.now(timezone.utc).isoformat(),
+                "config": self._emergency_mode_config
+            })
+            
+            # Create emergency snapshot
+            try:
+                await snapshot_guild(guild, trigger_event="emergency_lockdown")
+                self.logger.info(f"Emergency snapshot created for guild {guild_id}")
+            except Exception as e:
+                self.logger.warning(f"Failed to create emergency snapshot: {e}")
+            
+            # Schedule automatic deactivation
+            asyncio.create_task(self._schedule_emergency_deactivation(guild_id))
+            
+        except Exception as e:
+            self.logger.error(f"Error activating emergency lockdown for guild {guild_id}: {e}", exc_info=True)
+    
+    async def _schedule_emergency_deactivation(self, guild_id: int) -> None:
+        """Schedule emergency mode deactivation after configured duration."""
+        duration_minutes = self._emergency_mode_config.get("duration_minutes", 10)
+        await asyncio.sleep(duration_minutes * 60)
+        
+        async with self._lock:
+            if guild_id in self._emergency_mode_active:
+                # Check if there have been recent attacks before deactivating
+                attack_time = self._attack_detected_time.get(guild_id)
+                if attack_time:
+                    time_since_attack = (datetime.now(timezone.utc) - attack_time).total_seconds()
+                    if time_since_attack < 300:  # If attack within 5 minutes, extend emergency mode
+                        self.logger.info(f"Extending emergency mode for guild {guild_id} due to recent attack")
+                        await self._schedule_emergency_deactivation(guild_id)
+                        return
+                
+                self._emergency_mode_active.remove(guild_id)
+                if guild_id in self._attack_detected_time:
+                    del self._attack_detected_time[guild_id]
+                
+                self.logger.security(
+                    "EMERGENCY_LOCKDOWN_DEACTIVATED",
+                    f"Emergency lockdown deactivated for guild {guild_id}",
+                    guild_id=guild_id
+                )
+    
+    async def is_emergency_active(self, guild_id: int) -> bool:
+        """Check if emergency mode is active for a guild."""
+        async with self._lock:
+            return guild_id in self._emergency_mode_active
+    
     async def _wait_for_audit_log_quota(self, guild_id: int) -> None:
-        """Wait if necessary to respect audit log rate limits (token bucket with minimal wait)."""
+        """Wait if necessary to respect audit log rate limits with improved backoff handling."""
+        # Use the improved global rate limiter for audit logs
+        await self._wait_for_discord_api_quota("audit_log")
+        
+        # Additional per-guild rate limiting for audit logs
         # Skip rate limiting during emergency mode for maximum speed
         async with self._lock:
             in_emergency = guild_id in self._emergency_mode_active
@@ -630,13 +773,18 @@ class Antinuke(commands.Cog):
             bucket["tokens"] = min(self._audit_log_burst_size, bucket["tokens"] + time_since_update * self._audit_log_rate_limit)
             bucket["last_update"] = now
             
-            # If no tokens available, calculate wait time
+            # If no tokens available, calculate wait time with improved handling
             if bucket["tokens"] < 1:
-                # Wait only if absolutely necessary (minimal wait for speed)
+                # Calculate wait time
                 wait_time = (1 - bucket["tokens"]) / self._audit_log_rate_limit
                 if wait_time > 0:
-                    await asyncio.sleep(min(wait_time, 0.1))  # Max 100ms wait for speed
-                    bucket["tokens"] = min(self._audit_log_burst_size, bucket["tokens"] + wait_time * self._audit_log_rate_limit)
+                    # Increased max wait time and added logging
+                    actual_wait = min(wait_time, 1.0)  # Max 1 second wait (increased from 100ms)
+                    if actual_wait > 0.1:  # Only log significant waits
+                        self.logger.debug(f"Audit log rate limiting for guild {guild_id}: waiting {actual_wait:.2f}s")
+                    await asyncio.sleep(actual_wait)
+                    # Replenish tokens after wait
+                    bucket["tokens"] = min(self._audit_log_burst_size, bucket["tokens"] + actual_wait * self._audit_log_rate_limit)
             
             # Consume a token
             bucket["tokens"] -= 1
@@ -936,12 +1084,23 @@ class Antinuke(commands.Cog):
         count = self.rate_tracker.count_events(guild_id, user_id, action_type, window)
         return count > max_count
 
-    async def _apply_punishment(self, guild: discord.Guild, member: discord.Member, punishment: str, reason: str) -> None:
+    async def _apply_punishment(self, guild: discord.Guild, member: discord.Member, punishment: str, reason: str, bypass_whitelist: bool = False, severity: str = "normal") -> None:
         try:
+            # Check if emergency mode is active - if so, always bypass whitelist
+            emergency_active = await self.is_emergency_active(guild.id)
+            if emergency_active:
+                bypass_whitelist = True
+                severity = "critical"
+                self.logger.security("EMERGENCY_MODE_PUNISHMENT", f"Emergency mode active - bypassing all checks for user {member.id}", guild.id, member.id)
+            
             # Final security check: Verify whitelist status one more time
-            if await self._is_whitelisted(guild.id, member.id):
-                self.logger.warning(f"Aborting punishment for {member.id} - user is whitelisted")
-                return
+            # CRITICAL: Allow whitelist bypass for high-severity security threats
+            if not bypass_whitelist and severity != "critical":
+                if await self._is_whitelisted(guild.id, member.id):
+                    self.logger.warning(f"Aborting punishment for {member.id} - user is whitelisted")
+                    return
+            elif bypass_whitelist or severity == "critical":
+                self.logger.security("WHITELIST_BYPASS", f"Bypassing whitelist for user {member.id} due to {severity} severity threat", guild.id, member.id)
             
             # Record this attack for consecutive detection
             self.enhanced_restore.attack_detector.record_attack(guild.id)
@@ -1176,20 +1335,27 @@ class Antinuke(commands.Cog):
                 punishment = "ban"  # Maximum punishment for suspicious patterns
                 reason = f"[Repent Antinuke] CRITICAL: Suspicious pattern detected - {pattern_result.get('pattern', 'unknown')}. Action: {action_type}"
                 self.logger.security("SUSPICIOUS_PATTERN", f"Pattern: {pattern_result.get('pattern')}, Count: {pattern_result.get('count')}", guild_id=guild.id, user_id=user_id)
+                
+                # Activate emergency lockdown for suspicious patterns
+                if self._emergency_mode_config.get("auto_activate", True):
+                    await self.activate_emergency_lockdown(guild.id, f"Suspicious pattern: {pattern_result.get('pattern')}")
+                
+                await self._apply_punishment(guild, member, punishment, reason, bypass_whitelist=True, severity="critical")
             elif is_zero_tolerance:
                 punishment = "ban"  # Maximum punishment for zero-tolerance actions
                 reason = f"[Repent Antinuke] CRITICAL: Zero-tolerance action - {action_type}"
                 self.logger.security("ZERO_TOLERANCE", f"Action: {action_type}", guild_id=guild.id, user_id=user_id)
+                
+                # Activate emergency lockdown for zero-tolerance actions
+                if self._emergency_mode_config.get("auto_activate", True):
+                    await self.activate_emergency_lockdown(guild.id, f"Zero-tolerance action: {action_type}")
+                
+                await self._apply_punishment(guild, member, punishment, reason, bypass_whitelist=True, severity="critical")
             else:
                 punishment = settings.get("punishment", DEFAULT_PUNISHMENT)
                 reason = f"[Repent Antinuke] {action_type} threshold exceeded"
-
-            await self._apply_punishment(guild, member, punishment, reason)
+                await self._apply_punishment(guild, member, punishment, reason)
             await add_punished_user(guild.id, user_id, reason, self.bot.user.id if self.bot.user else 0, punishment)
-            
-            # MAXIMUM SECURITY: For suspicious patterns, trigger emergency mode
-            if is_suspicious_pattern:
-                await self._trigger_emergency_mode(guild, reason)
             
             # MAXIMUM SECURITY: For zero-tolerance actions, clean up all webhooks
             if action_type in ["webhook_create", "webhook_delete"]:
@@ -2438,12 +2604,13 @@ class Antinuke(commands.Cog):
             try:
                 # Get user from audit logs for tracking
                 await self._wait_for_audit_log_quota(before.guild.id)
-                async for entry in before.guild.audit_logs(action=discord.AuditLogAction.channel_update, limit=1):
-                    if entry.target.id == after.id and entry.changes.before.name == before.name:
-                        user = entry.user
-                        if user:
-                            # Track rename with per-user threshold detection
-                            rename_count, threshold = await self.rename_tracker.track_rename(
+                try:
+                    async for entry in before.guild.audit_logs(action=discord.AuditLogAction.channel_update, limit=1):
+                        if entry.target.id == after.id and entry.changes.before.name == before.name:
+                            user = entry.user
+                            if user:
+                                # Track rename with per-user threshold detection
+                                rename_count, threshold = await self.rename_tracker.track_rename(
                                 before.guild.id, user.id, after.id, before.name, after.name
                             )
 
@@ -2464,6 +2631,14 @@ class Antinuke(commands.Cog):
                                 cache_key = (before.guild.id, user.id)
                                 self._punished_users_cache[cache_key] = datetime.now(timezone.utc)
                             break
+                except discord.HTTPException as e:
+                    if e.status == 429:
+                        # Handle rate limit with proper backoff
+                        retry_after = e.retry_after if hasattr(e, 'retry_after') else None
+                        await self._handle_rate_limit_error("audit_log", retry_after)
+                        self.logger.warning(f"Rate limited on audit logs for guild {before.guild.id}")
+                    else:
+                        raise
             except Exception as e:
                 self.logger.error(f"Error tracking channel rename: {e}")
             

@@ -228,12 +228,13 @@ class AdvancedAntinuke(BaseAntinuke):
         )
         
         # Take action based on anomaly score
+        # CRITICAL: High anomaly scores bypass whitelist checks to prevent attacks from trusted but compromised users
         if anomaly_report.overall_score > 0.9:
-            await self._apply_punishment(guild, attacker, "ban", reason)
+            await self._apply_punishment(guild, attacker, "ban", reason, bypass_whitelist=True, severity="critical")
         elif anomaly_report.overall_score > 0.8:
-            await self._apply_punishment(guild, attacker, "timeout", reason)
+            await self._apply_punishment(guild, attacker, "timeout", reason, bypass_whitelist=True, severity="critical")
         elif anomaly_report.recommended_action in ["restrict", "block"]:
-            await self._apply_punishment(guild, attacker, "strip", reason)
+            await self._apply_punishment(guild, attacker, "strip", reason, bypass_whitelist=True, severity="high")
 
     async def _handle_defense_decision(
         self,

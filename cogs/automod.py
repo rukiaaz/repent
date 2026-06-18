@@ -11,6 +11,7 @@ from discord.ext import commands
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import asyncio
+import time
 from typing import Dict, List, Set, Tuple
 import difflib
 import unicodedata
@@ -1242,6 +1243,64 @@ class AutoMod(commands.Cog):
             embed = success_embed("Anti-Raid Disabled", "Anti-raid mode is now disabled. Normal member joining resumed.")
         
         await interaction.response.send_message(embed=embed, ephemeral=False)
+
+    @discord.app_commands.command(name="ping", description="Check bot latency")
+    async def ping(self, interaction: discord.Interaction):
+        """Check bot latency with WebSocket and API response times."""
+        # Calculate WebSocket latency
+        ws_latency = round(self.bot.latency * 1000)
+        
+        # Measure API latency
+        start = time.perf_counter()
+        await interaction.response.send_message("Testing...", ephemeral=True)
+        end = time.perf_counter()
+        api_latency = round((end - start) * 1000)
+
+        # Create response embed
+        embed = discord.Embed(title="🏓 Pong!", color=0x44FF88)
+        embed.add_field(name="WebSocket", value=f"`{ws_latency}ms`", inline=True)
+        embed.add_field(name="API", value=f"`{api_latency}ms`", inline=True)
+        
+        # Determine status based on latency
+        if ws_latency < 100 and api_latency < 200:
+            status = "Excellent"
+            color = 0x44FF88
+        elif ws_latency < 200 and api_latency < 400:
+            status = "Good"
+            color = 0xFFFF44
+        else:
+            status = "Degraded"
+            color = 0xFF4444
+        
+        embed.add_field(name="Status", value=status, inline=False)
+        embed.color = color
+        
+        await interaction.edit_original_response(embed=embed)
+
+    @discord.app_commands.command(name="sync", description="Manually sync commands (Debug use)")
+    async def sync_commands(self, interaction: discord.Interaction):
+        """Manually trigger command sync (for debugging)."""
+        # Only allow bot owner to use this
+        if interaction.user.id != OWNER_ID:
+            return await interaction.response.send_message(
+                embed=error_embed("Bot owner only."), 
+                ephemeral=True
+            )
+
+        await interaction.response.send_message("Syncing commands...", ephemeral=True)
+        
+        try:
+            # Sync commands globally
+            synced = await self.bot.tree.sync()
+            
+            embed = success_embed("Commands Synced", f"Successfully synced **{len(synced)}** commands to Discord.")
+            await interaction.edit_original_response(embed=embed)
+            
+            self.logger.info(f"Manual command sync completed: {len(synced)} commands synced")
+        except Exception as e:
+            embed = error_embed("Sync Failed", f"Failed to sync commands: {str(e)}")
+            await interaction.edit_original_response(embed=embed)
+            self.logger.error(f"Manual command sync failed: {e}", exc_info=True)
 
 
 async def setup(bot: commands.Bot):

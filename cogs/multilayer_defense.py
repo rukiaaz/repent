@@ -8,6 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from datetime import datetime, timezone
+from typing import Optional
 
 from database import get_guild, update_guild, log_action
 from utils.embeds import success_embed, error_embed, info_embed

@@ -940,3 +940,31 @@ Traceback (most recent call last):
   File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
     # Check basic guild permissions first
 UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 22:54:01 - Repent - ERROR - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    # Check basic guild permissions first
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 23:03:10 - Repent - ERROR - Failed to punish 1512856894308483192: unsupported operand type(s) for -: 'float' and 'tuple'
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 942, in _apply_punishment
+    if old_punished_keys:
+  File "D:\repentv3\cogs\antinuke.py", line 897, in _is_whitelisted
+    if old_entries:
+  File "D:\repentv3\database.py", line 2894, in is_user_whitelisted_fast
+    if cache_entry is not None and _is_cache_valid("whitelist_users", cache_key, cache_entry):
+                                   ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\repentv3\database.py", line 2838, in _is_cache_valid
+    return (time.time() - timestamp) < ttl
+            ~~~~~~~~~~~~^~~~~~~~~~~
+TypeError: unsupported operand type(s) for -: 'float' and 'tuple'
+2026-06-18 23:04:01 - Repent - ERROR - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    # Check basic guild permissions first
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 23:14:01 - Repent - ERROR - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    # Check basic guild permissions first
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value

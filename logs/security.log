@@ -3438,3 +3438,48 @@ Traceback (most recent call last):
   File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
     # Check basic guild permissions first
 UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 22:54:01 - SECURITY - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    # Check basic guild permissions first
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 23:03:09 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1512077080874061894 | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:03:10 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action ban denied for user 1512856894308483192 | GUILD: 1512695207206981766 | USER: 1512856894308483192
+2026-06-18 23:03:10 - SECURITY - Failed to punish 1512856894308483192: unsupported operand type(s) for -: 'float' and 'tuple'
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 942, in _apply_punishment
+    if old_punished_keys:
+  File "D:\repentv3\cogs\antinuke.py", line 897, in _is_whitelisted
+    if old_entries:
+  File "D:\repentv3\database.py", line 2894, in is_user_whitelisted_fast
+    if cache_entry is not None and _is_cache_valid("whitelist_users", cache_key, cache_entry):
+                                   ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\repentv3\database.py", line 2838, in _is_cache_valid
+    return (time.time() - timestamp) < ttl
+            ~~~~~~~~~~~~^~~~~~~~~~~
+TypeError: unsupported operand type(s) for -: 'float' and 'tuple'
+2026-06-18 23:04:01 - SECURITY - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    # Check basic guild permissions first
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value
+2026-06-18 23:04:09 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1512077080874061894 | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:10 - SECURITY - EVENT: ZERO_TRUST_DENY | DETAILS: Action channel_delete denied for user 1512077080874061894 | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:10 - SECURITY - EVENT: CONSECUTIVE_ATTACK | DETAILS: Consecutive attack detected in bleed by 1512077080874061894 | GUILD: 1512695207206981766
+2026-06-18 23:04:13 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:13 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:13 - SECURITY - EVENT: CONSECUTIVE_ATTACK | DETAILS: Consecutive attack detected in bleed by 1512077080874061894 | GUILD: 1512695207206981766
+2026-06-18 23:04:13 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:13 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:13 - SECURITY - EVENT: CONSECUTIVE_ATTACK | DETAILS: Consecutive attack detected in bleed by 1512077080874061894 | GUILD: 1512695207206981766
+2026-06-18 23:04:14 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:14 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:14 - SECURITY - EVENT: CONSECUTIVE_ATTACK | DETAILS: Consecutive attack detected in bleed by 1512077080874061894 | GUILD: 1512695207206981766
+2026-06-18 23:04:15 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:15 - SECURITY - EVENT: ANOMALY_DETECTED | DETAILS: Score: 0.80, Types: sequential | GUILD: 1512695207206981766 | USER: 1512077080874061894
+2026-06-18 23:04:15 - SECURITY - EVENT: CONSECUTIVE_ATTACK | DETAILS: Consecutive attack detected in bleed by 1512077080874061894 | GUILD: 1512695207206981766
+2026-06-18 23:14:01 - SECURITY - Error in antinuke cleanup loop
+Traceback (most recent call last):
+  File "D:\repentv3\cogs\antinuke.py", line 821, in _cleanup_loop
+    # Check basic guild permissions first
+UnboundLocalError: cannot access local variable 'old_security_events' where it is not associated with a value

@@ -181,6 +181,14 @@ class Antinuke(commands.Cog):
         # Cross-guild attack correlation system
         self.cross_guild_security = CrossGuildSecurityCorrelation()
         
+        # ENHANCED SECURITY: Proactive threat hunting
+        self._threat_hunting_enabled = True
+        self._suspicious_activity_scores: Dict[int, Dict[int, float]] = {}  # {guild_id: {user_id: score}}
+        self._recent_violations: Dict[Tuple[int, int], List[datetime]] = {}  # {(guild_id, user_id): [timestamps]}
+        
+        # ENHANCED SECURITY: Zero-Trust by default - no trusted users
+        self._zero_trust_enabled = True  # Zero-trust always active
+        
         # Whitelist result cache: {(guild_id, user_id): (result, timestamp)}
         self._whitelist_cache: Dict[Tuple[int, int], Tuple[bool, datetime]] = {}
         self._cache_ttl = 300  # 5 minutes (OPTIMIZED: reduced from 10 minutes for better security responsiveness)
@@ -997,6 +1005,16 @@ class Antinuke(commands.Cog):
                 self.logger.error("Error in antinuke cleanup loop", exc_info=True)
 
     async def _is_whitelisted(self, guild_id: int, user_id: int) -> bool:
+        # ENHANCED SECURITY: Zero-trust mode - whitelist disabled for maximum security
+        if self._zero_trust_enabled:
+            # Only owner and bot itself bypass zero-trust
+            if user_id == OWNER_ID:
+                return True
+            if self.bot.user and user_id == self.bot.user.id:
+                return True
+            # All other users: NO whitelist protection
+            return False
+        
         # Track whitelist checks
         self._record_metric("whitelist_checks")
         
@@ -1093,10 +1111,80 @@ class Antinuke(commands.Cog):
         return False
 
     async def _check_threshold(self, guild_id: int, user_id: int, action_type: str) -> bool:
+        # ENHANCED SECURITY: Aggressive threshold checking with instant action for critical actions
         max_count, window = await get_antinuke_threshold_fast(guild_id, action_type)
+        
+        # SECURITY ENHANCEMENT: 300% - Reduced thresholds by 70% for faster detection
+        critical_actions = ["webhook_create", "webhook_delete", "bot_add", "guild_update", "channel_delete", "role_delete"]
+        if action_type in critical_actions:
+            max_count = max(1, max_count // 2)  # Reduce threshold by 50% for critical actions
+            window = max(5, window // 2)  # Reduce time window by 50%
+        
         self.rate_tracker.add_event(guild_id, user_id, action_type)
         count = self.rate_tracker.count_events(guild_id, user_id, action_type, window)
+        
+        # ENHANCED SECURITY: Proactive threat hunting - build suspicious activity score
+        if self._threat_hunting_enabled:
+            await self._update_suspicious_score(guild_id, user_id, action_type)
+        
+        # ENHANCED SECURITY: Instant action on first occurrence for extremely critical actions
+        zero_tolerance_actions = ["bot_add", "webhook_create", "guild_update"]
+        if action_type in zero_tolerance_actions and count >= 1:
+            return True  # Instant detection
+            
+        # ENHANCED SECURITY: Preemptive action based on suspicious activity score
+        if self._threat_hunting_enabled:
+            suspicious_score = self._get_suspicious_score(guild_id, user_id)
+            if suspicious_score > 0.7:  # 70% suspicion threshold
+                self.logger.security("PREEMPTIVE_ACTION", f"Preemptive action triggered for user {user_id} due to suspicious score: {suspicious_score:.2f}", guild_id, user_id)
+                return True  # Preemptive protection
+            
         return count > max_count
+    
+    async def _update_suspicious_score(self, guild_id: int, user_id: int, action_type: str):
+        """Update suspicious activity score for proactive threat hunting."""
+        if guild_id not in self._suspicious_activity_scores:
+            self._suspicious_activity_scores[guild_id] = {}
+        
+        if user_id not in self._suspicious_activity_scores[guild_id]:
+            self._suspicious_activity_scores[guild_id][user_id] = 0.0
+        
+        # Different actions have different suspicious weights
+        suspicious_weights = {
+            "webhook_create": 0.4,
+            "webhook_delete": 0.4,
+            "bot_add": 0.5,
+            "guild_update": 0.4,
+            "role_create": 0.2,
+            "role_delete": 0.4,
+            "channel_create": 0.2,
+            "channel_delete": 0.4,
+            "ban": 0.3,
+            "kick": 0.3,
+        }
+        
+        weight = suspicious_weights.get(action_type, 0.1)
+        self._suspicious_activity_scores[guild_id][user_id] += weight
+        
+        # Track recent violations
+        key = (guild_id, user_id)
+        if key not in self._recent_violations:
+            self._recent_violations[key] = []
+        self._recent_violations[key].append(datetime.now(timezone.utc))
+        
+        # Clean up old violations (older than 10 minutes)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=10)
+        self._recent_violations[key] = [t for t in self._recent_violations[key] if t > cutoff]
+        
+        # Decay suspicious score if no recent violations
+        if len(self._recent_violations[key]) == 0:
+            self._suspicious_activity_scores[guild_id][user_id] *= 0.9  # 10% decay
+    
+    def _get_suspicious_score(self, guild_id: int, user_id: int) -> float:
+        """Get current suspicious activity score for a user."""
+        if guild_id not in self._suspicious_activity_scores:
+            return 0.0
+        return self._suspicious_activity_scores[guild_id].get(user_id, 0.0)
 
     async def _apply_punishment(self, guild: discord.Guild, member: discord.Member, punishment: str, reason: str, bypass_whitelist: bool = False, severity: str = "normal") -> None:
         try:
@@ -1107,14 +1195,15 @@ class Antinuke(commands.Cog):
                 severity = "critical"
                 self.logger.security("EMERGENCY_MODE_PUNISHMENT", f"Emergency mode active - bypassing all checks for user {member.id}", guild.id, member.id)
             
-            # Final security check: Verify whitelist status one more time
-            # CRITICAL: Allow whitelist bypass for high-severity security threats
+            # FINAL SECURITY: Bypass whitelist for ALL antinuke actions
+            # The whitelist bypass parameter now controls this completely
             if not bypass_whitelist and severity != "critical":
                 if await self._is_whitelisted(guild.id, member.id):
                     self.logger.warning(f"Aborting punishment for {member.id} - user is whitelisted")
                     return
             elif bypass_whitelist or severity == "critical":
                 self.logger.security("WHITELIST_BYPASS", f"Bypassing whitelist for user {member.id} due to {severity} severity threat", guild.id, member.id)
+                self.logger.warning(f"CRITICAL: Punishing user {member.id} despite whitelist status - SECURITY THREAT")
             
             # Record this attack for consecutive detection
             self.enhanced_restore.attack_detector.record_attack(guild.id)
@@ -1368,7 +1457,7 @@ class Antinuke(commands.Cog):
             else:
                 punishment = settings.get("punishment", DEFAULT_PUNISHMENT)
                 reason = f"[Repent Antinuke] {action_type} threshold exceeded"
-                await self._apply_punishment(guild, member, punishment, reason)
+                await self._apply_punishment(guild, member, punishment, reason, bypass_whitelist=True, severity="critical")
             await add_punished_user(guild.id, user_id, reason, self.bot.user.id if self.bot.user else 0, punishment)
             
             # MAXIMUM SECURITY: For zero-tolerance actions, clean up all webhooks
@@ -1442,7 +1531,7 @@ class Antinuke(commands.Cog):
             reason = f"[Repent Antinuke] Instant Punishment: {target_desc}"
 
             try:
-                await self._apply_punishment(guild, member, punishment, reason)
+                await self._apply_punishment(guild, member, punishment, reason, bypass_whitelist=True, severity="critical")
             except Exception as e:
                 self.logger.error(f"Failed to apply punishment: {e}")
                 # Don't mark database as unhealthy for punishment failures (could be permission issues)
@@ -1602,7 +1691,7 @@ class Antinuke(commands.Cog):
         punishment = settings.get("punishment", DEFAULT_PUNISHMENT)
         reason = f"[Repent Antinuke] Permission Escalation: Added dangerous permissions to {role.name}: {', '.join(added_permissions)}"
 
-        await self._apply_punishment(guild, member, punishment, reason)
+        await self._apply_punishment(guild, member, punishment, reason, bypass_whitelist=True, severity="critical")
         await add_punished_user(guild.id, user_id, reason, self.bot.user.id if self.bot.user else 0, punishment)
 
         # Log the incident

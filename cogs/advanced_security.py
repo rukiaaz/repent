@@ -101,4 +101,14 @@ class AdvancedSecurity(commands.Cog):
             )
 
 async def setup(bot: commands.Bot):
+    """Load the AdvancedSecurity cog."""
+    # Clear any existing commands that might conflict
+    try:
+        existing_commands = bot.tree.get_commands()
+        for cmd in existing_commands:
+            if cmd.name == "defense":
+                bot.tree.remove_command(cmd.name)
+    except Exception as e:
+        pass  # Ignore errors during cleanup
+    
     await bot.add_cog(AdvancedSecurity(bot))

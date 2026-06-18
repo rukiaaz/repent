@@ -202,13 +202,13 @@ class AdvancedAntinuke(BaseAntinuke):
         # Apply punishment based on sensitivity
         if decision.trust_score.overall_score < 0.3:
             # Very low trust - immediate ban
-            await self._apply_punishment(guild, attacker, "ban", reason)
+            await self._apply_punishment(guild, attacker, "ban", reason, bypass_whitelist=True, severity="critical")
         elif decision.trust_score.overall_score < 0.5:
             # Low trust - timeout
-            await self._apply_punishment(guild, attacker, "timeout", reason)
+            await self._apply_punishment(guild, attacker, "timeout", reason, bypass_whitelist=True, severity="high")
         else:
             # Medium trust - strip permissions
-            await self._apply_punishment(guild, attacker, "strip", reason)
+            await self._apply_punishment(guild, attacker, "strip", reason, bypass_whitelist=True, severity="high")
 
     async def _handle_high_anomaly(
         self,

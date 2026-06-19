@@ -1,5 +1,5 @@
 """
-Repent - Configuration file
+Balance - Configuration file
 All constants and defaults for the bot.
 """
 
@@ -11,7 +11,7 @@ load_dotenv()
 # ── Bot Identity ──
 TOKEN = os.getenv("DISCORD_TOKEN", "")
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
-BOT_NAME = "Repent"
+BOT_NAME = "Balance"
 VERSION = "1.0.0"
 
 # ── Default Antinuke Thresholds ──
@@ -88,4 +88,4 @@ CACHE_AUTO_SAVE_INTERVAL = 120  # seconds (reduced from 300 for faster restore)
 MAX_LOG_FIELDS = 4
 
 # ── Database ──
-DB_PATH = "data/repent.db"
+DB_PATH = "data/balance.db"

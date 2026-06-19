@@ -1,5 +1,5 @@
 """
-Repent - Advanced Discord Antinuke & Security Bot
+Balance - Advanced Discord Antinuke & Security Bot
 Entry point. Loads cogs, initializes cache, auto-purges old data.
 Updated: Fixed database initialization and type errors
 """

@@ -1,4 +1,4 @@
-"""Repent - Configuration Commands
+"""Balance - Configuration Commands
 
 Setup wizard, whitelist management, config viewing, antinuke settings.
 """
@@ -154,8 +154,8 @@ class InteractiveSetupView(discord.ui.View):
         if not ch:
             try:
                 ch = await guild.create_text_channel(
-                    name="repent-logs",
-                    reason="[Repent] Auto-created log channel during setup",
+                    name="balance-logs",
+                    reason="[Balance] Auto-created log channel during setup",
                     overwrites={
                         guild.default_role: discord.PermissionOverwrite(read_messages=False),
                         guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, embed_links=True)
@@ -215,14 +215,14 @@ class InteractiveSetupView(discord.ui.View):
                         f"**Permission Status:**\n{warning_text}",
             color=0x44FF88
         )
-        embed.set_footer(text="Repent Security Bot")
+        embed.set_footer(text="Balance Security Bot")
 
         self.stop()
         await interaction.response.edit_message(embed=embed, view=None)
 
     async def update_embed(self, interaction: discord.Interaction):
         embed = discord.Embed(
-            title="Repent One-Click Setup Wizard",
+            title="Balance One-Click Setup Wizard",
             description="Complete the interactive steps below to fully secure your server.",
             color=0x4488FF
         )
@@ -327,7 +327,7 @@ class Config(commands.Cog):
         await get_guild(interaction.guild.id)  # Ensure guild exists in DB
 
         embed = discord.Embed(
-            title=" Repent One-Click Setup Wizard",
+            title=" Balance One-Click Setup Wizard",
             description=" Complete the interactive steps below to fully secure your server.",
             color=0x4488FF
         )
@@ -357,12 +357,12 @@ class Config(commands.Cog):
         await interaction.response.defer(thinking=True)
 
         # 1. Log channel
-        ch = discord.utils.get(guild.text_channels, name="repent-logs")
+        ch = discord.utils.get(guild.text_channels, name="balance-logs")
         if not ch:
             try:
                 ch = await guild.create_text_channel(
-                    name="repent-logs",
-                    reason="[Repent] Created via /quicksetup",
+                    name="balance-logs",
+                    reason="[Balance] Created via /quicksetup",
                     overwrites={
                         guild.default_role: discord.PermissionOverwrite(read_messages=False),
                         guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, embed_links=True)
@@ -407,7 +407,7 @@ class Config(commands.Cog):
 
         embed = discord.Embed(
             title="⚡ Quick Setup Complete",
-            description=f"Repent has been fully configured and activated in **{guild.name}**!\n\n"
+            description=f"Balance has been fully configured and activated in **{guild.name}**!\n\n"
                         f"**Log Channel:** {ch.mention}\n"
                         f"**Punishment:** `ban`\n"
                         f"**Owner/Invoker Whitelist:** Whitelisted (Full Trust)\n"
@@ -415,7 +415,7 @@ class Config(commands.Cog):
                         f"**Permission Status:**\n{warning_text}",
             color=0x44FF88
         )
-        embed.set_footer(text="Repent Security Bot")
+        embed.set_footer(text="Balance Security Bot")
         await interaction.followup.send(embed=embed)
 
     # ── Config View ──

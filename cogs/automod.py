@@ -1,5 +1,5 @@
 """
-Repent - AutoMod System
+Balance - AutoMod System
 Message-based automod: anti-spam, anti-invite, anti-mention, anti-caps, bad words, etc.
 Enhanced with ML-based pattern recognition and adaptive filtering.
 """
@@ -1276,6 +1276,64 @@ class AutoMod(commands.Cog):
         embed.color = color
         
         await interaction.edit_original_response(embed=embed)
+
+    @discord.app_commands.command(name="invite", description="Get the bot invite link")
+    async def invite(self, interaction: discord.Interaction):
+        """Generate an invite link for the bot."""
+        # Create invite URL with required permissions
+        permissions = discord.Permissions(
+            administrator=True,  # Required for antinuke functionality
+            ban_members=True,
+            kick_members=True,
+            manage_roles=True,
+            manage_channels=True,
+            view_audit_log=True,
+            manage_messages=True,
+            manage_webhooks=True,
+            read_messages=True,
+            send_messages=True,
+            embed_links=True,
+            attach_files=True,
+            read_message_history=True,
+            add_reactions=True,
+            use_external_emojis=True,
+            manage_guild=True
+        )
+        
+        invite_url = discord.utils.oauth_url(
+            self.bot.application_id,
+            permissions=permissions,
+            scopes=("bot", "applications.commands")
+        )
+        
+        embed = discord.Embed(
+            title="🤖 Invite Balance Bot",
+            description="Add Balance to your server with comprehensive protection!",
+            color=0x3B82F6
+        )
+        
+        embed.add_field(
+            name="Features",
+            value="• Advanced Antinuke\n• AutoMod with ML detection\n• Multi-layer defense\n• Zero-trust architecture\n• Behavioral analysis",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="Required Permissions",
+            value="Administrator (for full protection)",
+            inline=False
+        )
+        
+        # Create a button for the invite link
+        view = discord.ui.View()
+        button = discord.ui.Button(
+            label="Invite Balance",
+            style=discord.ButtonStyle.url,
+            url=invite_url
+        )
+        view.add_item(button)
+        
+        await interaction.response.send_message(embed=embed, view=view)
 
     @discord.app_commands.command(name="sync", description="Manually sync commands (Debug use)")
     async def sync_commands(self, interaction: discord.Interaction):

@@ -1,5 +1,5 @@
 """
-Repent - Database layer
+Balance - Database layer
 SQLite via aiosqlite. All operations are async.
 """
 

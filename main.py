@@ -87,8 +87,10 @@ class Repent(commands.Bot):
                 cogs_to_load.append(f"cogs.{priority_cog[:-3]}")
         
         # Add remaining cogs
+        # Exclude antinuke.py since antinuke_advanced.py replaces it
+        excluded_cogs = ["antinuke.py"]
         for filename in os.listdir(cogs_dir):
-            if filename.endswith(".py") and filename != "__init__.py" and filename not in priority_cogs:
+            if filename.endswith(".py") and filename != "__init__.py" and filename not in priority_cogs and filename not in excluded_cogs:
                 cog_name = f"cogs.{filename[:-3]}"
                 cogs_to_load.append(cog_name)
         

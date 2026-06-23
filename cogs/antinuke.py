@@ -1586,7 +1586,11 @@ class Antinuke(commands.Cog):
                 self.logger.debug(f"Event already processed - skipping duplicate punishment for user {user_id}, action {action_type}, target {target_id}")
                 return
             
+            # CRITICAL: Check whitelist for bot_add
+            # Non-whitelisted admins cannot add bots (prevents premium bot nukes)
+            # Whitelisted admins can add bots (they're trusted)
             if await self._is_whitelisted(guild.id, user_id):
+                # Admin is whitelisted - allow them to add bots without punishment
                 return
 
             # Graceful degradation: if database is unhealthy, use fallback mode
@@ -1623,7 +1627,10 @@ class Antinuke(commands.Cog):
             reason = f"[Repent Antinuke] Instant Punishment: {target_desc}"
 
             try:
-                await self._apply_punishment(guild, member, punishment, reason, bypass_whitelist=True, severity="critical")
+                # For bot_add, we already checked whitelist in detection logic
+                # If we reach here, the admin is NOT whitelisted, so punish them
+                # For other actions, respect whitelist via _apply_punishment
+                await self._apply_punishment(guild, member, punishment, reason, bypass_whitelist=False, severity="critical")
             except Exception as e:
                 self.logger.error(f"Failed to apply punishment: {e}")
                 # Don't mark database as unhealthy for punishment failures (could be permission issues)
@@ -2176,6 +2183,17 @@ class Antinuke(commands.Cog):
             if entry.target and hasattr(entry.target, "id"):
                 extra_bot_id = int(entry.target.id)
             target_desc = f"Bot: {getattr(entry.target, 'name', 'Unknown')} (`{getattr(entry.target, 'id', '0')}`)"
+            
+            # MAXIMUM SECURITY: Instant punishment for non-whitelisted admins adding bots
+            # This prevents premium bot nukes like the one that occurred
+            if not await self._is_whitelisted(guild.id, attacker.id):
+                # Check if the bot being added is whitelisted
+                if not await is_bot_whitelisted(guild.id, extra_bot_id):
+                    instant_punish = True
+                    instant_reason = "Unauthorized bot addition by non-whitelisted admin - premium bot attack prevention"
+                    self.logger.security("UNAUTHORIZED_BOT_ADD_INSTANT", 
+                        f"Non-whitelisted admin {attacker.id} attempted to add bot {extra_bot_id}", 
+                        guild_id=guild.id, user_id=attacker.id)
 
         elif action == discord.AuditLogAction.webhook_create:
             action_type = "webhook_create"
@@ -2559,6 +2577,10 @@ class Antinuke(commands.Cog):
         if instant_punish:
             target_id = getattr(entry.target, 'id', 0) if entry.target else 0
             await self._handle_instant_punishment(guild, attacker.id, action_type or "permission_escalation", instant_reason, guild_name_changed, target_id)
+            
+            # If this was a bot addition, also kick the bot that was added
+            if action == discord.AuditLogAction.bot_add and extra_bot_id is not None:
+                await self._kick_bot_if_unauthorized(guild, attacker.id, extra_bot_id)
             # Trigger auto-restore for all channels if channel rename attack detected
             if action_type == "channel_update" and instant_punish:
                 # Get all channels from latest snapshot and restore their names immediately
@@ -2633,7 +2655,12 @@ class Antinuke(commands.Cog):
         self._record_metric("detection_times_ms", detection_time_ms)
 
     async def _kick_bot_if_unauthorized(self, guild: discord.Guild, adder_id: int, bot_id: int) -> None:
+        # Check if the adder is whitelisted
         if await self._is_whitelisted(guild.id, adder_id):
+            return
+
+        # Check if the bot being added is whitelisted
+        if await is_bot_whitelisted(guild.id, bot_id):
             return
 
         bot_member = guild.get_member(bot_id)
@@ -2649,10 +2676,12 @@ class Antinuke(commands.Cog):
         if not bot_member or not getattr(bot_member, "bot", False):
             return
 
+        # Kick the unauthorized bot immediately
         try:
-            await bot_member.kick(reason="[Repent Antinuke] Unauthorized bot add")
-        except Exception:
-            pass
+            await bot_member.kick(reason="[Repent Antinuke] Unauthorized bot add by non-whitelisted admin")
+            self.logger.security("UNAUTHORIZED_BOT_ADD", f"Kicked bot {bot_id} added by non-whitelisted admin {adder_id}", guild_id=guild.id, user_id=adder_id)
+        except Exception as e:
+            self.logger.error(f"Failed to kick unauthorized bot {bot_id}: {e}")
 
     async def _detect_rapid_channel_renames(self, guild_id: int, user_id: int) -> bool:
         """Detect if a user is rapidly renaming channels using rate tracker."""

@@ -66,6 +66,15 @@ class AdvancedAntinuke(BaseAntinuke):
         guild = entry.guild
         attacker = entry.user
         action = entry.action
+        
+        # Log the attacker for debugging
+        is_bot = getattr(attacker, 'bot', False)
+        self.logger.debug(f"Processing audit entry: Action={action}, Attacker ID={attacker.id}, Attacker={attacker.name}, IsBot={is_bot}")
+        
+        # CRITICAL: If the attacker is our own bot, skip processing to prevent self-punishment
+        if self.bot.user and attacker.id == self.bot.user.id:
+            self.logger.warning(f"Skipping audit entry performed by our own bot (ID: {attacker.id})")
+            return
 
         # Determine action type
         action_type = self._determine_action_type(entry)
@@ -200,15 +209,17 @@ class AdvancedAntinuke(BaseAntinuke):
         )
         
         # Apply punishment based on sensitivity
+        # SECURITY: Removed bypass_whitelist for zero-trust - whitelist should be respected
+        # unless there's clear evidence of account compromise
         if decision.trust_score.overall_score < 0.3:
-            # Very low trust - immediate ban
-            await self._apply_punishment(guild, attacker, "ban", reason, bypass_whitelist=True, severity="critical")
+            # Very low trust - immediate ban (but still respect whitelist unless critical)
+            await self._apply_punishment(guild, attacker, "ban", reason, bypass_whitelist=False, severity="critical")
         elif decision.trust_score.overall_score < 0.5:
-            # Low trust - timeout
-            await self._apply_punishment(guild, attacker, "timeout", reason, bypass_whitelist=True, severity="high")
+            # Low trust - kick (more reliable than timeout for permission issues)
+            await self._apply_punishment(guild, attacker, "kick", reason, bypass_whitelist=False, severity="high")
         else:
             # Medium trust - strip permissions
-            await self._apply_punishment(guild, attacker, "strip", reason, bypass_whitelist=True, severity="high")
+            await self._apply_punishment(guild, attacker, "strip", reason, bypass_whitelist=False, severity="high")
 
     async def _handle_high_anomaly(
         self,
@@ -227,14 +238,26 @@ class AdvancedAntinuke(BaseAntinuke):
             [a.anomaly_type.value for a in anomaly_report.individual_anomalies]
         )
         
+        # Log the user we're about to punish for debugging
+        self.logger.warning(f"About to punish user {attacker.id} for anomaly score {anomaly_report.overall_score:.2f}")
+        
+        # Check if we're trying to punish the bot itself - this is a bug
+        if self.bot.user and attacker.id == self.bot.user.id:
+            self.logger.error(f"CRITICAL BUG: Attempting to punish the bot itself! Attacker ID: {attacker.id}, Bot ID: {self.bot.user.id}")
+            return
+        
         # Take action based on anomaly score
-        # CRITICAL: High anomaly scores bypass whitelist checks to prevent attacks from trusted but compromised users
-        if anomaly_report.overall_score > 0.9:
+        # SECURITY: Only bypass whitelist for extremely critical anomalies (> 0.95)
+        # For lower anomaly scores, respect whitelist to prevent false positives
+        if anomaly_report.overall_score > 0.95:
+            # EXTREMELY CRITICAL: Bypass whitelist for near-certain attacks
             await self._apply_punishment(guild, attacker, "ban", reason, bypass_whitelist=True, severity="critical")
+            self.logger.security("WHITELIST_BYPASS_CRITICAL", f"Bypassed whitelist for user {attacker.id} due to critical anomaly score {anomaly_report.overall_score:.2f}", guild.id, attacker.id)
         elif anomaly_report.overall_score > 0.8:
-            await self._apply_punishment(guild, attacker, "timeout", reason, bypass_whitelist=True, severity="critical")
+            # High anomaly but not critical - respect whitelist
+            await self._apply_punishment(guild, attacker, "kick", reason, bypass_whitelist=False, severity="critical")
         elif anomaly_report.recommended_action in ["restrict", "block"]:
-            await self._apply_punishment(guild, attacker, "strip", reason, bypass_whitelist=True, severity="high")
+            await self._apply_punishment(guild, attacker, "strip", reason, bypass_whitelist=False, severity="high")
 
     async def _handle_defense_decision(
         self,

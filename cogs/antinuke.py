@@ -247,6 +247,9 @@ class Antinuke(commands.Cog):
         # Event deduplication: {(guild_id, user_id, action_type, target_id): timestamp}
         self._processed_events: Dict[Tuple[int, int, str, int], datetime] = {}
         
+        # Punishment notification rate limiting: {(guild_id, user_id, punishment): timestamp}
+        self._punishment_notifications: Dict[Tuple[int, int, str], datetime] = {}
+        
         # Lock for thread-safe operations
         self._lock = asyncio.Lock()
         
@@ -352,6 +355,54 @@ class Antinuke(commands.Cog):
             return 0.0
         index = int(len(times) * 0.95)
         return times[min(index, len(times) - 1)]
+    
+    def _can_punish_user(self, guild: discord.Guild, member: discord.Member, punishment: str) -> tuple[bool, str]:
+        """Check if the bot can punish a user with the given punishment type.
+        
+        Returns:
+            tuple[bool, str]: (can_punish, reason)
+        """
+        bot_member = guild.me
+        
+        # Cannot punish server owner
+        if member.id == guild.owner_id:
+            return False, "User is server owner"
+        
+        # Cannot punish bot itself
+        if self.bot.user and member.id == self.bot.user.id:
+            return False, "Cannot punish the bot itself"
+        
+        # Check role hierarchy
+        if member.roles:
+            user_highest_role = max(member.roles, key=lambda r: r.position)
+            
+            # If user's highest role is >= bot's highest role, most punishments won't work
+            if user_highest_role >= bot_member.top_role:
+                if punishment in ["ban", "kick", "timeout"]:
+                    return False, f"User has higher/equal role ({user_highest_role.name})"
+                # strip might still work for some roles
+            elif punishment == "strip":
+                # For strip, check if there are any removable roles
+                removable_roles = [
+                    role for role in member.roles 
+                    if role < bot_member.top_role and role != guild.default_role and not role.managed
+                ]
+                if not removable_roles:
+                    return False, "No removable roles (all roles are too high, managed, or default)"
+        
+        # Check bot permissions
+        bot_permissions = bot_member.guild_permissions
+        
+        if punishment == "ban" and not bot_permissions.ban_members:
+            return False, "Bot lacks ban_members permission"
+        elif punishment == "kick" and not bot_permissions.kick_members:
+            return False, "Bot lacks kick_members permission"
+        elif punishment == "timeout" and not bot_permissions.moderate_members:
+            return False, "Bot lacks moderate_members permission"
+        elif punishment == "strip" and not bot_permissions.manage_roles:
+            return False, "Bot lacks manage_roles permission"
+        
+        return True, "OK"
 
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get a summary of performance metrics."""
@@ -1188,6 +1239,20 @@ class Antinuke(commands.Cog):
 
     async def _apply_punishment(self, guild: discord.Guild, member: discord.Member, punishment: str, reason: str, bypass_whitelist: bool = False, severity: str = "normal") -> None:
         try:
+            # CRITICAL BUG FIX: Never punish the bot itself
+            if self.bot.user and member.id == self.bot.user.id:
+                self.logger.error(f"CRITICAL BUG: Attempting to punish the bot itself! Member ID: {member.id}, Bot ID: {self.bot.user.id}")
+                return
+            
+            # CRITICAL SECURITY: Never bypass whitelist for premium bots
+            # Premium bots on the blacklist are always treated as security risks
+            if member.bot:
+                from database import is_premium_bot_blacklisted
+                if await is_premium_bot_blacklisted(member.id):
+                    self.logger.security("PREMIUM_BOT_DETECTED", f"Premium bot {member.id} detected - blocking whitelist bypass and punishing", guild.id, member.id)
+                    # Force bypass_whitelist to False for premium bots
+                    bypass_whitelist = False
+            
             # Check if emergency mode is active - if so, always bypass whitelist
             emergency_active = await self.is_emergency_active(guild.id)
             if emergency_active:
@@ -1220,36 +1285,39 @@ class Antinuke(commands.Cog):
             except Exception as e:
                 self.logger.warning(f"Failed to create attack snapshot: {e}")
             
-            # Check if bot can punish this user based on role hierarchy
-            bot_member = guild.me
-            
-            # Cannot punish server owner
-            if member.id == guild.owner_id:
-                self.logger.warning(f"Cannot punish server owner {member.id}")
-                await self._notify_owner(guild, self._create_permission_denied_embed(guild, member, punishment, "User is server owner"))
+            # PRE-VALIDATION: Check if bot can actually punish this user before attempting
+            can_punish, punish_reason = self._can_punish_user(guild, member, punishment)
+            if not can_punish:
+                self.logger.warning(f"Cannot punish {member.id} with {punishment}: {punish_reason}")
+                
+                # Try fallback punishments in order of severity
+                fallback_attempts = []
+                if punishment == "ban":
+                    fallback_attempts = ["kick", "timeout", "strip"]
+                elif punishment == "kick":
+                    fallback_attempts = ["timeout", "strip"]
+                elif punishment == "timeout":
+                    fallback_attempts = ["strip"]
+                
+                for fallback_punishment in fallback_attempts:
+                    can_fallback, fallback_reason = self._can_punish_user(guild, member, fallback_punishment)
+                    if can_fallback:
+                        self.logger.info(f"Attempting fallback punishment {fallback_punishment} for {member.id} (original {punishment} failed: {punish_reason})")
+                        await self._apply_punishment(guild, member, fallback_punishment, f"{reason} (fallback from {punishment})", bypass_whitelist, severity)
+                        return
+                
+                # No viable punishment found - notify owner and log
+                self.logger.error(f"No viable punishment available for {member.id} - all attempts failed")
+                await self._notify_owner(guild, self._create_permission_denied_embed(guild, member, punishment, punish_reason))
                 return
             
-            # Check role hierarchy - can only punish users with lower roles
-            if member.roles:
-                # Get user's highest role
-                user_highest_role = max(member.roles, key=lambda r: r.position)
-                
-                # If user's highest role is >= bot's highest role, cannot punish
-                if user_highest_role >= bot_member.top_role:
-                    self.logger.warning(f"Cannot punish {member.id} - role hierarchy: user role {user_highest_role.name} >= bot role {bot_member.top_role.name}")
-                    await self._notify_owner(guild, self._create_permission_denied_embed(guild, member, punishment, f"User has higher/equal role ({user_highest_role.name})"))
-                    
-                    # Try alternative punishment: strip permissions instead
-                    if punishment in ["ban", "kick", "timeout"]:
-                        self.logger.info(f"Attempting alternative punishment (strip) for {member.id}")
-                        await self._apply_punishment(guild, member, "strip", reason + " (original punishment: " + punishment + " failed due to role hierarchy)")
-                    return
-            
-            # If user has no roles or has lower roles, proceed with punishment
+            # Proceed with punishment
             if punishment == "ban":
                 await guild.ban(member, reason=reason, delete_message_days=0)
+                self.logger.security("PUNISHMENT_SUCCESS", f"Banned user {member.id}", guild.id, member.id)
             elif punishment == "kick":
                 await guild.kick(member, reason=reason)
+                self.logger.security("PUNISHMENT_SUCCESS", f"Kicked user {member.id}", guild.id, member.id)
             elif punishment == "strip":
                 bot_member = guild.me
                 roles_to_remove = [
@@ -1260,32 +1328,56 @@ class Antinuke(commands.Cog):
                 await member.remove_roles(*roles_to_remove, reason=reason)
                 if member.voice and member.voice.channel:
                     await member.edit(deafen=True, reason=reason)
+                self.logger.security("PUNISHMENT_SUCCESS", f"Stripped roles from user {member.id}", guild.id, member.id)
             elif punishment == "timeout":
                 until = datetime.now(timezone.utc) + timedelta(days=28)
                 await member.timeout(until, reason=reason)
+                self.logger.security("PUNISHMENT_SUCCESS", f"Timed out user {member.id}", guild.id, member.id)
                 
         except discord.Forbidden as e:
-            # Explicit permission error
-            self.logger.error(f"Forbidden to punish {member.id}: {e}")
-            try:
-                owner = guild.get_member(guild.owner_id)
-                if owner:
-                    await owner.send(
-                        f"⚠️ **{guild.name}**: I tried to punish **{member}** (`{member.id}`) for {punishment} but I lack permissions (Forbidden). Error: {e}"
-                    )
-            except Exception:
-                pass
+            # Explicit permission error - this should be rare now with pre-validation
+            self.logger.error(f"Forbidden to punish {member.id} with {punishment}: {e}")
+            
+            # Rate limit owner notifications to avoid spam
+            notification_key = (guild.id, member.id, punishment)
+            now = datetime.now(timezone.utc)
+            
+            # Only notify if we haven't notified about this specific user/punishment in the last 5 minutes
+            if notification_key not in self._punishment_notifications or \
+               (now - self._punishment_notifications[notification_key]).total_seconds() > 300:
+                
+                self._punishment_notifications[notification_key] = now
+                
+                try:
+                    owner = guild.get_member(guild.owner_id)
+                    if owner:
+                        await owner.send(
+                            f"⚠️ **{guild.name}**: I tried to punish **{member}** (`{member.id}`) for {punishment} but I lack permissions (Forbidden). Error: {e}\n\n"
+                            f"This should not happen with pre-validation. Please check my role hierarchy and permissions."
+                        )
+                except Exception:
+                    pass
         except Exception as e:
             # Other errors
-            self.logger.error(f"Failed to punish {member.id}: {e}", exc_info=True)
-            try:
-                owner = guild.get_member(guild.owner_id)
-                if owner:
-                    await owner.send(
-                        f"⚠️ **{guild.name}**: I tried to punish **{member}** (`{member.id}`) for {punishment} but encountered an error: {e}"
-                    )
-            except Exception:
-                pass
+            self.logger.error(f"Failed to punish {member.id} with {punishment}: {e}", exc_info=True)
+            
+            # Rate limit owner notifications
+            notification_key = (guild.id, member.id, punishment)
+            now = datetime.now(timezone.utc)
+            
+            if notification_key not in self._punishment_notifications or \
+               (now - self._punishment_notifications[notification_key]).total_seconds() > 300:
+                
+                self._punishment_notifications[notification_key] = now
+                
+                try:
+                    owner = guild.get_member(guild.owner_id)
+                    if owner:
+                        await owner.send(
+                            f"⚠️ **{guild.name}**: I tried to punish **{member}** (`{member.id}`) for {punishment} but encountered an error: {e}"
+                        )
+                except Exception:
+                    pass
 
     def _create_permission_denied_embed(self, guild: discord.Guild, member: discord.Member, punishment: str, reason: str) -> discord.Embed:
         """Create an embed for permission denied situations."""
@@ -2003,7 +2095,8 @@ class Antinuke(commands.Cog):
         action = entry.action
 
         # Early exit: Skip if attacker is the bot itself
-        if attacker.id == self.bot.user.id:
+        if self.bot.user and attacker.id == self.bot.user.id:
+            self.logger.warning(f"Skipping audit entry performed by our own bot (ID: {attacker.id})")
             return
 
         # Early exit: Skip if attacker is the guild owner (owner can do anything)

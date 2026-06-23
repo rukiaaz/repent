@@ -598,7 +598,7 @@ class Config(commands.Cog):
 
     # ── Whitelist Commands ──
     class WhitelistView(discord.ui.View):
-        """Whitelist action selection view with dropdown."""
+        """Comprehensive whitelist management view with dropdowns."""
         def __init__(self, cog, guild):
             super().__init__(timeout=None)
             self.cog = cog
@@ -618,18 +618,94 @@ class Config(commands.Cog):
                 await self.cog._show_whitelist_list(interaction, self.guild)
                 self.stop()
             elif self.action in ["add", "remove"]:
-                # Ask for user
-                await interaction.response.send_message(
-                    "Please mention the user to add/remove.",
-                    ephemeral=True
+                # Show user selection dropdown
+                user_select_view = self.UserSelectView(self.cog, self.guild, self.action)
+                
+                # Create user select dropdown with up to 25 users
+                user_options = []
+                members_list = sorted(list(self.guild.members), key=lambda m: m.display_name)[:25]
+                
+                for member in members_list:
+                    # Skip bots for user whitelist
+                    if member.bot:
+                        continue
+                    user_options.append(discord.SelectOption(
+                        label=f"{member.display_name}",
+                        value=str(member.id),
+                        description=f"@{member.name}" if member.name != member.display_name else ""
+                    ))
+                
+                if not user_options:
+                    await interaction.response.send_message("No non-bot members found in server.", ephemeral=True)
+                    self.stop()
+                    return
+                
+                user_select_view.user_select.options = user_options
+                
+                embed = discord.Embed(
+                    title=f"{'Add' if self.action == 'add' else 'Remove'} User from Whitelist",
+                    description="Select a user from the dropdown below.",
+                    color=0xFFFFFF
                 )
-                # In a full implementation, we'd wait for a message or use a modal
-                # For now, we'll tell them to use the original command
-                await interaction.followup.send(
-                    "Please use `/whitelist @user` directly for now.",
-                    ephemeral=True
+                
+                await interaction.response.edit_message(embed=embed, view=user_select_view)
+            self.stop()
+
+        class UserSelectView(discord.ui.View):
+            def __init__(self, cog, guild, action):
+                super().__init__(timeout=None)
+                self.cog = cog
+                self.guild = guild
+                self.action = action
+
+            @discord.ui.select(
+                placeholder="Select a user...",
+                min_values=1,
+                max_values=1
+            )
+            async def user_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+                user_id = int(select.values[0])
+                member = self.guild.get_member(user_id)
+                
+                if not member:
+                    await interaction.response.send_message("User not found in server.", ephemeral=True)
+                    self.stop()
+                    return
+                
+                if self.action == "add":
+                    # Show trust level selection
+                    trust_view = self.TrustLevelView(self.cog, self.guild, member)
+                    embed = discord.Embed(
+                        title="Select Trust Level",
+                        description="Choose the trust level for this user.",
+                        color=0xFFFFFF
+                    )
+                    embed.add_field(name="Level 1 (Partial)", value="Basic protection, some restrictions apply", inline=False)
+                    embed.add_field(name="Level 2 (Full)", value="Full protection, bypasses most antinuke checks", inline=False)
+                    
+                    await interaction.response.edit_message(embed=embed, view=trust_view)
+                elif self.action == "remove":
+                    await self.cog._remove_user_from_whitelist(interaction, member)
+                    self.stop()
+
+            class TrustLevelView(discord.ui.View):
+                def __init__(self, cog, guild, member):
+                    super().__init__(timeout=None)
+                    self.cog = cog
+                    self.guild = guild
+                    self.member = member
+
+                @discord.ui.select(
+                    placeholder="Select trust level...",
+                    options=[
+                        discord.SelectOption(label="Level 1 (Partial)", value="1"),
+                        discord.SelectOption(label="Level 2 (Full)", value="2"),
+                    ]
                 )
-                self.stop()
+                async def select_trust_level(self, interaction: discord.Interaction, select: discord.ui.Select):
+                    level = int(select.values[0])
+                    await self.cog._add_user_to_whitelist(interaction, self.member, level)
+                    self.stop()
 
     @app_commands.command(name="whitelist", description="Manage whitelisted users (Admin only)")
     @app_commands.describe(
@@ -641,16 +717,32 @@ class Config(commands.Cog):
     async def whitelist(
         self,
         interaction: discord.Interaction,
-        action: str,
+        action: str = None,
         user: discord.Member = None,
         level: int = 1,
     ):
-        """Whitelist command with parameters (backward compatibility)."""
+        """Whitelist command with dropdown interface and backward compatibility."""
         if not await self._is_admin(interaction):
             return await interaction.response.send_message(embed=error_embed("Administrator required."), ephemeral=True)
 
-
         guild = interaction.guild
+        
+        # If no action provided, show dropdown interface
+        if action is None:
+            view = self.WhitelistView(self, guild)
+            embed = discord.Embed(
+                title="🛡️ User Whitelist",
+                description="Select an action to manage whitelisted users (trust level 2+ bypasses antinuke).",
+                color=0xFFFFFF
+            )
+            embed.add_field(name="Add User", value="Add a user to the whitelist (won't be punished by antinuke)", inline=False)
+            embed.add_field(name="Remove User", value="Remove a user from the whitelist", inline=False)
+            embed.add_field(name="View List", value="View all whitelisted users", inline=False)
+            embed.add_field(name="Trust Levels", value="Level 1: Partial protection | Level 2: Full protection", inline=False)
+
+            return await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        
+        # Backward compatibility: direct command usage
         action_l = action.lower().strip()
 
         if action_l == "add":
@@ -704,7 +796,7 @@ class Config(commands.Cog):
 
     # ── Bot Whitelist Commands ──
     class BotWhitelistView(discord.ui.View):
-        """Bot whitelist action selection view with dropdown."""
+        """Comprehensive bot whitelist management view with dropdowns."""
         def __init__(self, cog, guild):
             super().__init__(timeout=None)
             self.cog = cog
@@ -722,10 +814,67 @@ class Config(commands.Cog):
                 await self.cog._show_bot_whitelist_list(interaction, self.guild)
                 self.stop()
             elif self.action in ["add", "remove"]:
-                await interaction.response.send_message(
-                    "Please mention the bot to add/remove with the command:\n`/botwhitelist add/remove @bot`",
-                    ephemeral=True
+                # Show bot selection dropdown
+                bot_select_view = self.BotSelectView(self.cog, self.guild, self.action)
+                
+                # Create bot select dropdown with up to 25 bots
+                bot_options = []
+                bots_list = sorted([m for m in self.guild.members if m.bot], key=lambda m: m.display_name)[:25]
+                
+                for bot in bots_list:
+                    # Skip premium bots on blacklist
+                    from database import is_premium_bot_blacklisted
+                    if await is_premium_bot_blacklisted(bot.id):
+                        continue
+                    
+                    bot_options.append(discord.SelectOption(
+                        label=f"{bot.display_name}",
+                        value=str(bot.id),
+                        description=f"@{bot.name}" if bot.name != bot.display_name else ""
+                    ))
+                
+                if not bot_options:
+                    await interaction.response.send_message("No bots found in server (premium bots are automatically filtered).", ephemeral=True)
+                    self.stop()
+                    return
+                
+                bot_select_view.bot_select.options = bot_options
+                
+                embed = discord.Embed(
+                    title=f"{'Add' if self.action == 'add' else 'Remove'} Bot from Whitelist",
+                    description="Select a bot from the dropdown below. Note: Premium bots are automatically blocked.",
+                    color=0xFFFFFF
                 )
+                
+                await interaction.response.edit_message(embed=embed, view=bot_select_view)
+            self.stop()
+
+        class BotSelectView(discord.ui.View):
+            def __init__(self, cog, guild, action):
+                super().__init__(timeout=None)
+                self.cog = cog
+                self.guild = guild
+                self.action = action
+
+            @discord.ui.select(
+                placeholder="Select a bot...",
+                min_values=1,
+                max_values=1
+            )
+            async def bot_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+                bot_id = int(select.values[0])
+                bot = self.guild.get_member(bot_id)
+                
+                if not bot:
+                    await interaction.response.send_message("Bot not found in server.", ephemeral=True)
+                    self.stop()
+                    return
+                
+                if self.action == "add":
+                    reason = "Whitelisted via dropdown interface"
+                    await self.cog._add_bot_to_whitelist(interaction, bot, reason)
+                elif self.action == "remove":
+                    await self.cog._remove_bot_from_whitelist(interaction, bot)
                 self.stop()
 
     @app_commands.command(name="botwhitelist", description="Manage whitelisted bots - they won't be punished by antinuke (Admin only)")

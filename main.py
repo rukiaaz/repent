@@ -76,7 +76,8 @@ class Repent(commands.Bot):
         cogs_dir = os.path.join(os.path.dirname(__file__), "cogs")
         
         # Security cogs that must load first
-        priority_cogs = ["antinuke.py", "antiraid.py", "antinuke_advanced.py", "behavioral_analysis.py", "multilayer_defense.py", "zerotrust.py", "external_apps.py"]
+        # Note: antinuke.py is NOT included here since antinuke_advanced.py replaces it
+        priority_cogs = ["antinuke_advanced.py", "antiraid.py", "behavioral_analysis.py", "multilayer_defense.py", "zerotrust.py", "external_apps.py"]
         
         cogs_to_load = []
         

@@ -712,6 +712,16 @@ async def init_db():
             PRIMARY KEY (guild_id, role_id)
         )""",
 
+        # Premium bot blacklist (known premium bots that may bypass security)
+        """CREATE TABLE IF NOT EXISTS premium_bot_blacklist (
+            bot_id INTEGER PRIMARY KEY,
+            bot_name TEXT DEFAULT '',
+            bot_discriminator TEXT DEFAULT '',
+            threat_level INTEGER DEFAULT 1,
+            reason TEXT DEFAULT '',
+            added_at TEXT DEFAULT ''
+        )""",
+
         # Backups metadata
         """CREATE TABLE IF NOT EXISTS backups (
             backup_id TEXT PRIMARY KEY,
@@ -850,6 +860,7 @@ async def init_db():
         "CREATE INDEX IF NOT EXISTS idx_whitelist_guild ON whitelist(guild_id)",
         "CREATE INDEX IF NOT EXISTS idx_bot_whitelist_guild_bot ON bot_whitelist(guild_id, bot_id)",
         "CREATE INDEX IF NOT EXISTS idx_role_whitelist_guild_role ON role_whitelist(guild_id, role_id)",
+        "CREATE INDEX IF NOT EXISTS idx_premium_bot_blacklist_threat ON premium_bot_blacklist(threat_level)",
         "CREATE INDEX IF NOT EXISTS idx_guilds_guild_id ON guilds(guild_id)",
         "CREATE INDEX IF NOT EXISTS idx_action_log_guild_timestamp ON action_log(guild_id, timestamp)",
         "CREATE INDEX IF NOT EXISTS idx_punished_users_guild ON punished_users(guild_id)",
@@ -879,6 +890,13 @@ async def init_db():
         raise Exception(f"Failed to create critical tables: {missing_tables}")
     
     await db.close()
+    
+    # Initialize premium bot blacklist with known high-risk bots
+    try:
+        await initialize_premium_bot_blacklist()
+    except Exception as e:
+        import logging
+        logging.warning(f"Premium bot blacklist initialization failed: {e}")
     
     # Run database migrations
     try:
@@ -1067,6 +1085,11 @@ async def get_bot_whitelist(guild_id: int) -> List[Dict[str, Any]]:
 
 @with_retry(max_retries=5, backoff_factor=0.3)
 async def is_bot_whitelisted(guild_id: int, bot_id: int) -> bool:
+    """Check if bot is whitelisted, but deny if it's a premium security risk."""
+    # First check if it's a premium bot on the blacklist
+    if await is_premium_bot_blacklisted(bot_id):
+        return False  # Premium bots are never whitelisted even if explicitly added
+    
     db = await _get_db()
     cursor = await db.execute(
         "SELECT * FROM bot_whitelist WHERE guild_id = ? AND bot_id = ?",
@@ -1124,6 +1147,91 @@ async def is_role_whitelisted(guild_id: int, role_id: int) -> bool:
     row = await cursor.fetchone()
     await _release_db(db)
     return row is not None
+
+
+# ── Premium Bot Blacklist ──
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def add_premium_bot_blacklist(bot_id: int, bot_name: str, bot_discriminator: str = "", threat_level: int = 1, reason: str = ""):
+    """Add a premium bot to the security blacklist."""
+    db = await _get_db()
+    await db.execute(
+        """INSERT OR REPLACE INTO premium_bot_blacklist
+           (bot_id, bot_name, bot_discriminator, threat_level, reason, added_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (bot_id, bot_name, bot_discriminator, threat_level, reason, _now()),
+    )
+    await db.commit()
+    await _release_db(db)
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def remove_premium_bot_blacklist(bot_id: int):
+    """Remove a premium bot from the security blacklist."""
+    db = await _get_db()
+    await db.execute(
+        "DELETE FROM premium_bot_blacklist WHERE bot_id = ?",
+        (bot_id,),
+    )
+    await db.commit()
+    await _release_db(db)
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def is_premium_bot_blacklisted(bot_id: int) -> bool:
+    """Check if a bot is on the premium security blacklist."""
+    db = await _get_db()
+    cursor = await db.execute(
+        "SELECT 1 FROM premium_bot_blacklist WHERE bot_id = ?",
+        (bot_id,),
+    )
+    row = await cursor.fetchone()
+    await _release_db(db)
+    return row is not None
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def get_premium_bot_blacklist() -> List[Dict[str, Any]]:
+    """Get all premium bots on the security blacklist."""
+    db = await _get_db()
+    cursor = await db.execute(
+        "SELECT * FROM premium_bot_blacklist ORDER BY threat_level DESC",
+    )
+    rows = await cursor.fetchall()
+    await _release_db(db)
+    return [dict(row) for row in rows]
+
+
+@with_retry(max_retries=5, backoff_factor=0.3)
+async def initialize_premium_bot_blacklist():
+    """Initialize the premium bot blacklist with known high-risk premium bots."""
+    # List of known premium bot IDs that may pose security risks
+    premium_bots = [
+        (155149108183695360, "MEE6", "", 2, "Premium moderation bot with elevated permissions"),
+        (234395307759510526, "Dyno", "", 2, "Premium moderation bot with elevated permissions"),
+        (159440784028352512, "Nightbot", "", 1, "Streaming bot with channel moderation"),
+        (270904126974707200, "ProBot", "", 2, "Premium moderation bot with elevated permissions"),
+        (284279584567926785, "GiveawayBot", "", 1, "Giveaway bot with server permissions"),
+        (374071874071810058, "GAwesome Bot", "", 1, "Multi-purpose bot with various permissions"),
+        (161760830725779456, "Octavia", "", 1, "Music bot with voice permissions"),
+        (172002275412299265, "Pancake", "", 1, "Multi-purpose bot with moderation features"),
+        (133184924322109440, "BMO", "", 1, "Multi-purpose bot with server management"),
+        (238351814097592320, "AmariBot", "", 1, "Leveling bot with server permissions"),
+        (699439431830011905, "Security Bot", "", 3, "Security bot - high conflict risk with this bot"),
+    ]
+    
+    db = await _get_db()
+    for bot_data in premium_bots:
+        try:
+            await db.execute(
+                """INSERT OR IGNORE INTO premium_bot_blacklist
+                   (bot_id, bot_name, bot_discriminator, threat_level, reason, added_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                bot_data + (_now(),)
+            )
+        except Exception:
+            pass  # Skip if already exists
+    await db.commit()
+    await _release_db(db)
 
 
 @with_retry(max_retries=5, backoff_factor=0.3)
@@ -1603,9 +1711,13 @@ async def create_snapshot(
     
     # Get previous snapshot if not provided
     if previous_snapshot_id is None:
-        snapshots = await get_snapshots(guild_id, limit=1)
-        if snapshots:
-            previous_snapshot_id = snapshots[0].get('id')
+        try:
+            snapshots = await get_snapshots(guild_id, limit=1)
+            if snapshots and isinstance(snapshots, list) and len(snapshots) > 0:
+                previous_snapshot_id = snapshots[0].get('id')
+        except Exception as e:
+            # If we can't get previous snapshot, continue without it
+            pass
     
     snapshot_id = await db.execute(
         """INSERT INTO guild_snapshots 
@@ -2953,11 +3065,14 @@ async def is_user_whitelisted_fast(guild_id: int, user_id: int, is_bot: bool = F
     try:
         db = await _get_db()
         row = await db.execute(
-            "SELECT 1 FROM whitelist WHERE guild_id = ? AND user_id = ?",
+            "SELECT trust_level FROM whitelist WHERE guild_id = ? AND user_id = ?",
             (guild_id, user_id)
         )
-        is_whitelisted = row.fetchone() is not None
+        result = await row.fetchone()
         await _release_db(db)
+        
+        # FIXED: Only return True if trust_level >= 2 (full trust) for consistency with is_user_whitelisted_optimized
+        is_whitelisted = result is not None and result[0] >= 2
         
         # Cache result
         _antinuke_cache["whitelist_users"][f"user_{cache_key}"] = (is_whitelisted, time.time())
